@@ -1,21 +1,23 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Landing } from './pages/Landing';
+import { Splash } from './pages/Splash';
+import { Onboarding } from './pages/Onboarding';
+import { StudentDetails } from './pages/StudentDetails';
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Landing } from './pages/Landing'
-import { Splash } from './pages/Splash'
-import { Onboarding } from './pages/Onboarding'
+import { Login } from './pages/Login';
+import { Signup } from './pages/Signup';
 
-import { Login } from './pages/Login'
-import { Signup } from './pages/Signup'
-
-import { Home } from './pages/Home'
-import { StudyFlow } from './pages/StudyFlow'
-import { Progress } from './pages/Progress'
-import { Profile } from './pages/Profile'
-import { AppLayout } from './components/layout/AppLayout'
-import { TopBar } from './components/layout/TopBar'
-import { ProtectedRoute } from './components/layout/ProtectedRoute'
-import { AdminLayout } from './pages/admin/AdminLayout'
-import { CategoryManager } from './pages/admin/CategoryManager'
+import { Home } from './pages/Home';
+import { StudyFlow } from './pages/StudyFlow';
+import { MyCourseResources } from './pages/MyCourseResources';
+import { Progress } from './pages/Progress';
+import { Profile } from './pages/Profile';
+import { AppLayout } from './components/layout/AppLayout';
+import { TopBar } from './components/layout/TopBar';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { AdminLayout } from './pages/admin/AdminLayout';
+import { CategoryManager } from './pages/admin/CategoryManager';
+import { ContentManager } from './pages/admin/ContentManager';
 
 function App() {
   return (
@@ -25,6 +27,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/splash" element={<Splash />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/onboarding/student-details" element={<StudentDetails />} />
         
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -39,6 +42,7 @@ function App() {
           }
         >
           <Route index element={<Home />} />
+          <Route path="my-course" element={<MyCourseResources />} />
           <Route path="study/*" element={<StudyFlow />} />
           <Route path="tree" element={
             <div className="min-h-full flex flex-col">
@@ -46,7 +50,7 @@ function App() {
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
                 <div className="w-24 h-24 bg-green-100 text-green-600 rounded-3xl flex items-center justify-center mb-6 shadow-sm"><span className="text-5xl">🌳</span></div>
                 <h1 className="text-3xl font-black text-[#1E1B4B] mb-2">Study Tree</h1>
-                <p className="text-gray-500 font-medium">Grow your focus tree by completing study sessions. Coming soon!</p>
+                <p className="text-gray-500 font-medium">Grow your focus tree by completing study sessions.</p>
               </div>
             </div>
           } />
@@ -57,7 +61,7 @@ function App() {
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
                 <div className="w-24 h-24 bg-gray-100 text-gray-600 rounded-3xl flex items-center justify-center mb-6 shadow-sm"><span className="text-5xl">⚙️</span></div>
                 <h1 className="text-3xl font-black text-[#1E1B4B] mb-2">More Features</h1>
-                <p className="text-gray-500 font-medium">Settings, Support, and additional tools will be available here.</p>
+                <p className="text-gray-500 font-medium">Settings, Support, and additional tools.</p>
               </div>
             </div>
           } />
@@ -77,16 +81,16 @@ function App() {
             </div>
           } />
           <Route path="categories" element={<CategoryManager />} />
-          <Route path="streams" element={<div className="p-8">Streams Manager Coming Soon</div>} />
-          <Route path="materials" element={<div className="p-8">Materials Manager Coming Soon</div>} />
-          <Route path="settings" element={<div className="p-8">Settings Coming Soon</div>} />
+          <Route path="streams" element={<ContentManager />} />
+          <Route path="materials" element={<ContentManager />} />
+          <Route path="settings" element={<div className="p-8 font-bold text-gray-500">System Settings</div>} />
         </Route>
         
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

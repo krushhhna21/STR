@@ -1,13 +1,12 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Layers, FileText, Settings, LogOut, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, Layers, FileText, Settings, LogOut, ChevronLeft } from 'lucide-react';
 import { useAuthStore } from '../../store/auth';
 
 const adminNav = [
   { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-  { name: 'Categories', path: '/admin/categories', icon: Layers },
-  { name: 'Streams & Subjects', path: '/admin/streams', icon: BookOpen },
-  { name: 'Materials', path: '/admin/materials', icon: FileText },
+  { name: 'Categories & Streams', path: '/admin/categories', icon: Layers },
+  { name: 'Upload & Content Manager', path: '/admin/materials', icon: FileText },
   { name: 'Settings', path: '/admin/settings', icon: Settings },
 ];
 

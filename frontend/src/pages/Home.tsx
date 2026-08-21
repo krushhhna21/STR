@@ -6,7 +6,8 @@ import { TaskItem } from '../components/ui/TaskItem';
 import { Timer } from '../components/features/Timer';
 import { 
   Calculator, FlaskConical, Code2, BookText, TreePine, 
-  BookOpen, Bot, Clock, BarChart2, FileText, GraduationCap, LayoutGrid, RotateCcw
+  BookOpen, Bot, Clock, BarChart2, FileText, GraduationCap, LayoutGrid, RotateCcw,
+  Sparkles, ArrowRight, UserCheck
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useTimerStore } from '../store/timerStore';
@@ -16,18 +17,24 @@ export const Home: React.FC = () => {
   const { user } = useAuthStore();
   const { todayFocusSeconds, tasks, toggleTask, resetStats } = useTimerStore();
 
+  const profile = user?.studentProfile || {
+    streamName: 'Computer Science & Engineering (CSE)',
+    yearGrade: '3rd Year (Degree / B.Tech)',
+    categoryName: 'Engineering & Technology'
+  };
+
   // Dynamic progress calculations based on real timer state
   const targetSeconds = 4 * 3600; // 4 Hours target
   const focusPercentage = Math.min(100, Math.round((todayFocusSeconds / targetSeconds) * 100));
   const todayHoursFormatted = (todayFocusSeconds / 3600).toFixed(1);
 
   const quickAccessItems = [
-    { name: 'Study', icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100', path: '/app/study' },
-    { name: 'AI Help', icon: Bot, color: 'text-blue-600', bg: 'bg-blue-100', path: '/app/explore' },
+    { name: 'My Course', icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-100', path: '/app/my-course' },
+    { name: 'Study Flow', icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100', path: '/app/study' },
+    { name: 'AI Tutor', icon: Bot, color: 'text-blue-600', bg: 'bg-blue-100', path: '/app/explore' },
     { name: 'Timer', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-100', path: '/app' },
     { name: 'Progress', icon: BarChart2, color: 'text-orange-600', bg: 'bg-orange-100', path: '/app/progress' },
     { name: 'Notes', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', path: '/app/study/engineering' },
-    { name: 'Courses', icon: GraduationCap, color: 'text-teal-600', bg: 'bg-teal-100', path: '/app/study' },
     { name: 'Explore', icon: LayoutGrid, color: 'text-gray-600', bg: 'bg-gray-100', path: '/app/explore' },
   ];
 
@@ -40,15 +47,45 @@ export const Home: React.FC = () => {
         {/* Desktop Greeting */}
         <div className="hidden lg:flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-3xl font-black text-[#1E1B4B]">Hi, {user?.name?.split(' ')[0] || 'Krishna'} 👋</h1>
-            <p className="text-gray-500 font-medium mt-1">Let's make today productive with your active curriculum!</p>
+            <h1 className="text-3xl font-black text-[#1E1B4B]">Hi, {user?.name?.split(' ')[0] || 'Student'} 👋</h1>
+            <p className="text-gray-500 font-medium mt-1">Welcome back to your personalized study portal!</p>
           </div>
-          <button 
-            onClick={resetStats}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-all shadow-sm"
-            title="Reset focus numbers and session counters"
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/onboarding/student-details')}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-[#6C3BC7] font-bold text-xs rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
+            >
+              <UserCheck size={14} /> Registered: {profile.yearGrade}
+            </button>
+            <button 
+              onClick={resetStats}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-all shadow-sm"
+              title="Reset focus numbers and session counters"
+            >
+              <RotateCcw size={14} /> Reset Metrics
+            </button>
+          </div>
+        </div>
+
+        {/* Registered Course Hero Bar */}
+        <div className="bg-gradient-to-r from-[#1E1B4B] via-indigo-900 to-[#6C3BC7] rounded-[24px] p-5 lg:p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-indigo-900">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">
+              <Sparkles size={14} className="text-amber-400" /> Enrolled Curriculum
+            </div>
+            <h2 className="text-xl lg:text-2xl font-black text-white">
+              {profile.streamName}
+            </h2>
+            <p className="text-xs lg:text-sm text-indigo-200 font-medium mt-0.5">
+              Standard Grade / Year: <span className="text-white font-bold">{profile.yearGrade}</span> • Instant access to books, videos & study notes
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/app/my-course')}
+            className="px-5 py-3 bg-[#F52B91] hover:bg-[#d8217d] text-white font-bold text-xs lg:text-sm rounded-2xl shadow-lg shadow-[#F52B91]/30 transition-all flex items-center gap-2 shrink-0"
           >
-            <RotateCcw size={14} /> Reset Today's Metrics
+            Access Course Books, Videos & Resources <ArrowRight size={16} />
           </button>
         </div>
 
@@ -106,8 +143,8 @@ export const Home: React.FC = () => {
         {/* Quick Access */}
         <div className="bg-white rounded-[24px] border border-gray-50 p-4 lg:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[16px] lg:text-[18px] font-bold text-[#1E1B4B]">Quick Access</h3>
-            <span className="text-xs font-bold text-gray-400">Curriculum Navigation</span>
+            <h3 className="text-[16px] lg:text-[18px] font-bold text-[#1E1B4B]">Quick Access Navigation</h3>
+            <span className="text-xs font-bold text-gray-400">Tabs & Modules</span>
           </div>
           <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 lg:gap-4">
             {quickAccessItems.map((item, i) => (
