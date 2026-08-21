@@ -1,55 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Routes, Route, useParams } from 'react-router-dom';
-import { ChevronLeft, Search, BookOpen, GraduationCap, Code, PlayCircle, FileText, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Search, PlayCircle, FileText, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
+import { studyCategories } from '../data/studyData';
 
-const mockData = {
-  categories: [
-    { id: 'school', name: 'School (1st - 12th)', icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-100', desc: 'CBSE, ICSE, State Boards' },
-    { id: 'diploma', name: 'Diploma', icon: GraduationCap, color: 'text-purple-600', bg: 'bg-purple-100', desc: 'Polytechnic courses' },
-    { id: 'engineering', name: 'Engineering', icon: Code, color: 'text-indigo-600', bg: 'bg-indigo-100', desc: 'B.Tech / B.E. streams' },
-    { id: 'other', name: 'Other Courses', icon: BookOpen, color: 'text-orange-600', bg: 'bg-orange-100', desc: 'Language, Skills' }
-  ],
-  streams: [
-    { id: 'cse', name: 'Computer Science (CSE)', courses: 24, icon: Code },
-    { id: 'ece', name: 'Electronics (ECE)', courses: 18, icon: Code },
-    { id: 'me', name: 'Mechanical (ME)', courses: 15, icon: Code }
-  ],
-  subjects: [
-    { id: 'dbms', name: 'Database Management Systems', progress: 45 },
-    { id: 'os', name: 'Operating Systems', progress: 10 },
-    { id: 'cn', name: 'Computer Networks', progress: 80 }
-  ],
-  chapters: [
-    { id: 'intro', name: 'Introduction to DBMS', completed: true },
-    { id: 'relational', name: 'Relational Model & Algebra', completed: false },
-    { id: 'sql', name: 'SQL Fundamentals', completed: false }
-  ],
-  materials: [
-    { id: 'v1', type: 'video', name: 'What is a Database?', duration: '12:00', icon: PlayCircle },
-    { id: 'n1', type: 'notes', name: 'Chapter 1 Summary Notes', pages: 5, icon: FileText }
-  ]
-};
-
-// Generic Layout wrapper with Back button
-const FlowLayout: React.FC<{ title: string; children: React.ReactNode; showSearch?: boolean }> = ({ title, children, showSearch }) => {
+// Generic Flow Layout container with Navigation & Search
+const FlowLayout: React.FC<{ title: string; subtitle?: string; children: React.ReactNode; showSearch?: boolean; onSearch?: (query: string) => void }> = ({ 
+  title, subtitle, children, showSearch, onSearch 
+}) => {
   const navigate = useNavigate();
   return (
     <div className="min-h-full flex flex-col bg-white lg:bg-transparent">
-      {/* Mobile TopBar for consistent UI */}
       <div className="lg:hidden">
         <TopBar />
       </div>
       
-      <div className="px-6 py-6 max-w-5xl mx-auto w-full">
-        <div className="flex items-center gap-4 mb-6">
+      <div className="px-4 lg:px-8 py-6 max-w-6xl mx-auto w-full">
+        <div className="flex items-center gap-4 mb-4">
           <button 
             onClick={() => navigate(-1)} 
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors shadow-sm"
           >
             <ChevronLeft size={24} className="text-gray-700" />
           </button>
-          <h1 className="text-2xl font-black text-[#1E1B4B]">{title}</h1>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-black text-[#1E1B4B]">{title}</h1>
+            {subtitle && <p className="text-xs lg:text-sm text-gray-500 font-medium">{subtitle}</p>}
+          </div>
         </div>
 
         {showSearch && (
@@ -59,8 +36,9 @@ const FlowLayout: React.FC<{ title: string; children: React.ReactNode; showSearc
             </div>
             <input
               type="text"
-              className="block w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl leading-5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] font-medium transition-all text-gray-900"
-              placeholder="Search..."
+              onChange={(e) => onSearch?.(e.target.value)}
+              className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl leading-5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] font-medium transition-all text-gray-900 shadow-sm"
+              placeholder="Search streams, subjects, or topics..."
             />
           </div>
         )}
@@ -71,55 +49,80 @@ const FlowLayout: React.FC<{ title: string; children: React.ReactNode; showSearc
   );
 };
 
-// Views
+// 1. Categories View
 const CategoriesView = () => {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredCategories = studyCategories.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.desc.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="min-h-full">
-      <div className="lg:hidden"><TopBar /></div>
-      <div className="px-6 py-6 max-w-5xl mx-auto w-full">
-        <h1 className="text-2xl font-black text-[#1E1B4B] mb-6">Explore Courses</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {mockData.categories.map(c => (
-            <button 
-              key={c.id} 
-              onClick={() => navigate(`/app/study/${c.id}`)}
-              className="flex items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all text-left"
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${c.bg} ${c.color} mr-4 shrink-0`}>
-                <c.icon size={24} />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900">{c.name}</h3>
-                <p className="text-xs text-gray-500 mt-1 font-medium">{c.desc}</p>
-              </div>
-              <ChevronRight className="text-gray-300" />
-            </button>
-          ))}
-        </div>
+    <FlowLayout title="Explore Educational Streams" subtitle="Select your program, degree or board level" showSearch onSearch={setSearchTerm}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredCategories.map(c => (
+          <button 
+            key={c.id} 
+            onClick={() => navigate(`/app/study/${c.id}`)}
+            className="flex items-center p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all text-left group"
+          >
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${c.bg} ${c.color} mr-4 shrink-0 font-bold text-2xl group-hover:scale-105 transition-transform`}>
+              🎓
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#6C3BC7] transition-colors">{c.name}</h3>
+              <p className="text-xs text-gray-500 mt-1 font-medium leading-relaxed">{c.desc}</p>
+              <span className="inline-block text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md mt-2">
+                {c.streams.length} Streams Available
+              </span>
+            </div>
+            <ChevronRight className="text-gray-300 group-hover:text-[#6C3BC7] group-hover:translate-x-1 transition-all" />
+          </button>
+        ))}
       </div>
-    </div>
+    </FlowLayout>
   );
 };
 
+// 2. Streams / Branches View
 const StreamsView = () => {
   const navigate = useNavigate();
   const { categoryId } = useParams();
-  
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const category = studyCategories.find(c => c.id === categoryId) || studyCategories[0];
+  const filteredStreams = category.streams.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <FlowLayout title="Select Branch" showSearch>
-      <div className="grid grid-cols-1 gap-3">
-        {mockData.streams.map(s => (
+    <FlowLayout 
+      title={category.name} 
+      subtitle={`Choose your branch or specialized stream under ${category.name}`} 
+      showSearch 
+      onSearch={setSearchTerm}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredStreams.map(s => (
           <button 
             key={s.id} 
             onClick={() => navigate(`/app/study/${categoryId}/${s.id}`)}
-            className="flex items-center p-4 bg-white rounded-2xl border border-gray-100 hover:border-[#6C3BC7] transition-all text-left group"
+            className="flex flex-col p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#6C3BC7] transition-all text-left group"
           >
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-900 group-hover:text-[#6C3BC7] transition-colors">{s.name}</h3>
-              <p className="text-xs text-gray-500 mt-1 font-medium">{s.courses} Courses</p>
+            <div className="flex items-center justify-between w-full mb-2">
+              <h3 className="font-bold text-gray-900 text-base group-hover:text-[#6C3BC7] transition-colors">{s.name}</h3>
+              <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-lg">
+                {s.subjects.length} Subjects
+              </span>
             </div>
-            <ChevronRight className="text-gray-300 group-hover:text-[#6C3BC7]" />
+            <p className="text-xs text-gray-500 font-medium mb-4">{s.description}</p>
+            <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50 text-xs font-bold text-[#6C3BC7]">
+              <span>View Curriculum</span>
+              <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </div>
           </button>
         ))}
       </div>
@@ -127,25 +130,48 @@ const StreamsView = () => {
   );
 };
 
+// 3. Subjects View
 const SubjectsView = () => {
   const navigate = useNavigate();
   const { categoryId, streamId } = useParams();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const category = studyCategories.find(c => c.id === categoryId) || studyCategories[0];
+  const stream = category.streams.find(s => s.id === streamId) || category.streams[0];
   
+  const filteredSubjects = stream.subjects.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <FlowLayout title="Subjects" showSearch>
+    <FlowLayout 
+      title={stream.name} 
+      subtitle={`Enrolled Subjects & Syllabus for ${stream.name}`} 
+      showSearch 
+      onSearch={setSearchTerm}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {mockData.subjects.map(s => (
+        {filteredSubjects.map(s => (
           <button 
             key={s.id} 
             onClick={() => navigate(`/app/study/${categoryId}/${streamId}/${s.id}`)}
-            className="flex flex-col p-5 bg-white rounded-2xl border border-gray-100 hover:shadow-md transition-all text-left"
+            className="flex flex-col p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#6C3BC7] transition-all text-left group"
           >
-            <h3 className="font-bold text-gray-900 mb-4">{s.name}</h3>
-            <div className="w-full flex items-center gap-3">
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#F52B91] rounded-full" style={{ width: `${s.progress}%` }}></div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">{s.code}</span>
+              <span className="text-xs font-bold text-gray-400">{s.chapters.length} Chapters</span>
+            </div>
+            <h3 className="font-bold text-gray-900 text-lg mb-4 group-hover:text-[#6C3BC7] transition-colors">{s.name}</h3>
+            
+            <div className="w-full mt-auto">
+              <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                <span className="text-gray-500">Subject Progress</span>
+                <span className="text-[#6C3BC7]">{s.progress}%</span>
               </div>
-              <span className="text-xs font-bold text-gray-500">{s.progress}%</span>
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-[#6C3BC7] rounded-full transition-all duration-500" style={{ width: `${s.progress}%` }}></div>
+              </div>
             </div>
           </button>
         ))}
@@ -154,24 +180,35 @@ const SubjectsView = () => {
   );
 };
 
+// 4. Chapters View
 const ChaptersView = () => {
   const navigate = useNavigate();
   const { categoryId, streamId, subjectId } = useParams();
-  
+
+  const category = studyCategories.find(c => c.id === categoryId) || studyCategories[0];
+  const stream = category.streams.find(s => s.id === streamId) || category.streams[0];
+  const subject = stream.subjects.find(s => s.id === subjectId) || stream.subjects[0];
+
   return (
-    <FlowLayout title="Chapters">
+    <FlowLayout 
+      title={subject.name} 
+      subtitle={`${subject.code} • ${subject.chapters.length} Module Chapters`}
+    >
       <div className="space-y-3">
-        {mockData.chapters.map((c, i) => (
+        {subject.chapters.map((c, i) => (
           <button 
             key={c.id} 
             onClick={() => navigate(`/app/study/${categoryId}/${streamId}/${subjectId}/${c.id}`)}
-            className="w-full flex items-center p-4 bg-white rounded-2xl border border-gray-100 hover:border-[#6C3BC7] transition-all text-left group"
+            className="w-full flex items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#6C3BC7] transition-all text-left group"
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-4 ${c.completed ? 'bg-[#14B8A6] text-white' : 'bg-gray-100 text-gray-500'}`}>
-              {i + 1}
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm mr-4 ${c.completed ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'}`}>
+              {c.completed ? <CheckCircle2 size={20} /> : i + 1}
             </div>
-            <h3 className="font-bold text-gray-900 flex-1 group-hover:text-[#6C3BC7]">{c.name}</h3>
-            <ChevronRight className="text-gray-300 group-hover:text-[#6C3BC7]" />
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-900 group-hover:text-[#6C3BC7] transition-colors">{c.name}</h3>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">{c.materials.length} Learning Resources</p>
+            </div>
+            <ChevronRight className="text-gray-300 group-hover:text-[#6C3BC7] group-hover:translate-x-1 transition-all" />
           </button>
         ))}
       </div>
@@ -179,28 +216,39 @@ const ChaptersView = () => {
   );
 };
 
+// 5. Materials View
 const MaterialsView = () => {
+  const { categoryId, streamId, subjectId, chapterId } = useParams();
+
+  const category = studyCategories.find(c => c.id === categoryId) || studyCategories[0];
+  const stream = category.streams.find(s => s.id === streamId) || category.streams[0];
+  const subject = stream.subjects.find(s => s.id === subjectId) || stream.subjects[0];
+  const chapter = subject.chapters.find(c => c.id === chapterId) || subject.chapters[0];
+
   return (
-    <FlowLayout title="Study Materials">
+    <FlowLayout 
+      title={chapter.name} 
+      subtitle={`Study Notes, Video Lectures & Practice Sheets for ${chapter.name}`}
+    >
       <div className="space-y-3">
-        {mockData.materials.map(m => (
-          <button 
+        {chapter.materials.map(m => (
+          <div 
             key={m.id} 
-            className="w-full flex items-center p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-md transition-all text-left group"
+            className="w-full flex items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all text-left group cursor-pointer"
           >
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 ${m.type === 'video' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
-              <m.icon size={24} />
+              {m.type === 'video' ? <PlayCircle size={26} /> : <FileText size={26} />}
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-gray-900">{m.name}</h3>
+              <h3 className="font-bold text-gray-900 text-base">{m.name}</h3>
               <p className="text-xs text-gray-500 mt-1 font-medium">
-                {m.type === 'video' ? `Video • ${m.duration}` : `PDF • ${m.pages} pages`}
+                {m.type === 'video' ? `Video Lecture • ${m.duration}` : `Study Notes PDF • ${m.pages} Pages`}
               </p>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#6C3BC7] group-hover:text-white transition-colors">
-              <PlayCircle size={16} />
-            </div>
-          </button>
+            <button className="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-[#6C3BC7] hover:text-white font-bold text-xs rounded-xl transition-colors">
+              {m.type === 'video' ? 'Watch Now' : 'Open PDF'}
+            </button>
+          </div>
         ))}
       </div>
     </FlowLayout>
