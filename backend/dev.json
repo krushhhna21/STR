@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "id": "50954484-c2a7-47ee-9abe-e82f13bf4c95",
+      "name": "Krishna Chalwad",
+      "email": "krishnachalwad21@gmail.com",
+      "passwordHash": "$2b$10$Reo9eNd.31G9eORSe2HRPepxkrZnfMZ.Wmk24rBPD3HpkbJLVRKqC",
+      "role": "admin",
+      "createdAt": "2026-08-20T14:54:55.091Z"
+    }
+  ],
+  "categories": [],
+  "streams": [],
+  "subjects": [],
+  "chapters": [],
+  "materials": []
+}

@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-brand-primary: #F52B91;
+  --color-brand-secondary: #6C3BC7;
+  --color-brand-background: #F8F1FF;
+  --color-brand-card: #FFFFFF;
+
+  /* Typography */
+  --font-sans: "Poppins", "Inter", sans-serif;
+
+  /* Colors mapped for general use */
+  --color-primary: var(--color-brand-primary);
+  --color-secondary: var(--color-brand-secondary);
+  --color-background: var(--color-brand-background);
+  --color-surface: var(--color-brand-card);
+
+  @keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: #1E1B4B; /* Deep Navy/Purple text */
+    font-family: var(--font-sans);
+  }
+}
