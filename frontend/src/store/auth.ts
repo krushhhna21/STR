@@ -7,6 +7,14 @@ export interface StudentProfile {
   streamName: string;   // e.g. 'Computer Science & Engineering (CSE)'
   yearGrade: string;    // e.g. '3rd Year' or 'Class 12th'
   phone: string;
+  educationType?: 'school' | 'engineering' | 'diploma' | 'medical' | 'commerce' | 'other';
+  classLevel?: string;
+  board?: string;
+  state?: string;
+  streamTag?: string;
+  branch?: string;
+  scheme?: string;
+  course?: string;
 }
 
 export interface User {
@@ -17,6 +25,13 @@ export interface User {
   studentProfile?: StudentProfile;
 }
 
+const normalizeRole = (role?: string) => (role ? role.toString().trim().toLowerCase() : 'student');
+
+const normalizeUser = (user: User): User => ({
+  ...user,
+  role: normalizeRole(user.role),
+});
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -26,12 +41,21 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  user: (() => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      return storedUser ? normalizeUser(storedUser) : null;
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
+  })(),
   token: localStorage.getItem('token') || null,
   setAuth: (user, token) => {
-    localStorage.setItem('user', JSON.stringify(user));
+    const normalizedUser = normalizeUser(user);
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
     localStorage.setItem('token', token);
-    set({ user, token });
+    set({ user: normalizedUser, token });
   },
   updateStudentProfile: (profile) => set((state) => {
     if (!state.user) return state;

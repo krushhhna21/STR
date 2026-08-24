@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, googleLogin } from '../controllers/auth.controller';
+import { register, login, googleLogin, getMe, updateStudentProfile } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -7,10 +7,7 @@ const router = Router();
 router.post('/register', register);
 router.post('/login', login);
 router.post('/google', googleLogin);
-
-// Protected route example to verify token
-router.get('/me', authenticate, (req, res) => {
-  res.json({ user: (req as any).user });
-});
+router.get('/me', authenticate, getMe);
+router.put('/profile', authenticate, updateStudentProfile);
 
 export default router;

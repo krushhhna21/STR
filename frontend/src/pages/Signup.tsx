@@ -25,12 +25,13 @@ export const Signup: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
-      
-      const { token, user } = await res.json();
-      if (!res.ok) throw new Error(user?.error || 'Sign up failed');
-      
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sign up failed');
+
+      const { token, user } = data;
       setAuth(user, token);
-      navigate('/app', { replace: true });
+      navigate(user.studentProfile ? '/app' : '/onboarding/student-details', { replace: true });
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -47,12 +48,13 @@ export const Signup: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ access_token: tokenResponse.access_token }),
         });
-        const { token, user } = await res.json();
-        if (!res.ok) throw new Error('Google sign up failed');
-        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Google sign up failed');
+
+        const { token, user } = data;
         setAuth(user, token);
-        navigate('/app', { replace: true });
-      } catch(err: any) {
+        navigate(user.studentProfile ? '/app' : '/onboarding/student-details', { replace: true });
+      } catch (err: any) {
         setError(err.message || 'Google sign up failed');
       } finally {
         setLoading(false);

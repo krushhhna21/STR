@@ -27,7 +27,8 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   }
 };
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  if (req.user?.role !== 'admin') {
+  const role = req.user?.role?.toLowerCase();
+  if (role !== 'admin' && role !== 'administrator') {
     res.status(403).json({ error: 'Forbidden. Admin access required.' });
     return;
   }

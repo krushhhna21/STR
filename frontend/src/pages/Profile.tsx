@@ -8,6 +8,7 @@ import { GraduationCap, Mail, Phone, Edit3, Shield } from 'lucide-react';
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const isAdmin = (user?.role ?? '').toLowerCase() === 'admin' || (user?.role ?? '').toLowerCase() === 'administrator';
 
   const profile = user?.studentProfile || {
     streamName: 'Computer Science & Engineering (CSE)',
@@ -84,7 +85,7 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          {user?.role === 'admin' && (
+          {isAdmin && (
             <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Shield className="text-indigo-600" size={24} />

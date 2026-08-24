@@ -7,10 +7,11 @@ import { Timer } from '../components/features/Timer';
 import { 
   Calculator, FlaskConical, Code2, BookText, TreePine, 
   BookOpen, Bot, Clock, BarChart2, FileText, GraduationCap, LayoutGrid, RotateCcw,
-  Sparkles, ArrowRight, UserCheck
+  Sparkles, ArrowRight, UserCheck, Stethoscope
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useTimerStore } from '../store/timerStore';
+import { getStudentRecommendations } from '../utils/studentProfile';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -20,11 +21,23 @@ export const Home: React.FC = () => {
   const profile = user?.studentProfile || {
     streamName: 'Computer Science & Engineering (CSE)',
     yearGrade: '3rd Year (Degree / B.Tech)',
-    categoryName: 'Engineering & Technology'
+    categoryName: 'Engineering & Technology',
+    educationType: 'engineering',
+    branch: 'CSE',
+    streamTag: 'PCM',
+    classLevel: 'Class 12',
   };
 
-  // Dynamic progress calculations based on real timer state
-  const targetSeconds = 4 * 3600; // 4 Hours target
+  const recommendationCards = getStudentRecommendations(user?.studentProfile || profile) as Array<{
+    title: string;
+    progress: number;
+    path: string;
+    icon: any;
+    colorClass: string;
+    bgClass: string;
+  }>;
+
+  const targetSeconds = 4 * 3600;
   const focusPercentage = Math.min(100, Math.round((todayFocusSeconds / targetSeconds) * 100));
   const todayHoursFormatted = (todayFocusSeconds / 3600).toFixed(1);
 
@@ -34,7 +47,7 @@ export const Home: React.FC = () => {
     { name: 'AI Tutor', icon: Bot, color: 'text-blue-600', bg: 'bg-blue-100', path: '/app/explore' },
     { name: 'Timer', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-100', path: '/app' },
     { name: 'Progress', icon: BarChart2, color: 'text-orange-600', bg: 'bg-orange-100', path: '/app/progress' },
-    { name: 'Notes', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', path: '/app/study/engineering' },
+    { name: 'Notes', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', path: '/app/study' },
     { name: 'Explore', icon: LayoutGrid, color: 'text-gray-600', bg: 'bg-gray-100', path: '/app/explore' },
   ];
 
@@ -48,7 +61,7 @@ export const Home: React.FC = () => {
         <div className="hidden lg:flex items-center justify-between mb-2">
           <div>
             <h1 className="text-3xl font-black text-[#1E1B4B]">Hi, {user?.name?.split(' ')[0] || 'Student'} 👋</h1>
-            <p className="text-gray-500 font-medium mt-1">Welcome back to your personalized study portal!</p>
+            <p className="text-gray-500 font-medium mt-1">{profile.educationType ? `Your ${profile.educationType} learning path is ready.` : 'Welcome back to your personalized study portal!'}</p>
           </div>
           <div className="flex gap-2">
             <button 
@@ -77,7 +90,7 @@ export const Home: React.FC = () => {
               {profile.streamName}
             </h2>
             <p className="text-xs lg:text-sm text-indigo-200 font-medium mt-0.5">
-              Standard Grade / Year: <span className="text-white font-bold">{profile.yearGrade}</span> • Instant access to books, videos & study notes
+              {profile.educationType === 'school' ? `${profile.classLevel} • ${profile.board} • ${profile.streamTag}` : `${profile.yearGrade} • ${profile.branch || profile.streamTag || 'Academic Path'}`} • Personalized resources for your track
             </p>
           </div>
 
@@ -171,42 +184,29 @@ export const Home: React.FC = () => {
             </button>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div onClick={() => navigate('/app/study/engineering/cse/dbms')} className="cursor-pointer">
-              <CourseCard 
-                title="Database Systems (DBMS)" 
-                progress={65} 
-                icon={Code2} 
-                colorClass="text-[#4F46E5]" 
-                bgClass="bg-indigo-50" 
-              />
-            </div>
-            <div onClick={() => navigate('/app/study/school/class12-jee/phy12')} className="cursor-pointer">
-              <CourseCard 
-                title="Physics Class 12 & JEE" 
-                progress={85} 
-                icon={FlaskConical} 
-                colorClass="text-[#F52B91]" 
-                bgClass="bg-pink-50" 
-              />
-            </div>
-            <div onClick={() => navigate('/app/study/engineering/cse/dsa')} className="cursor-pointer">
-              <CourseCard 
-                title="Data Structures & Algorithms" 
-                progress={80} 
-                icon={Calculator} 
-                colorClass="text-[#14B8A6]" 
-                bgClass="bg-teal-50" 
-              />
-            </div>
-            <div onClick={() => navigate('/app/study/skills/web-dev/react-node')} className="cursor-pointer">
-              <CourseCard 
-                title="Full-Stack Web Dev" 
-                progress={95} 
-                icon={BookText} 
-                colorClass="text-[#F59E0B]" 
-                bgClass="bg-orange-50" 
-              />
-            </div>
+            {recommendationCards.map((item, index) => {
+              const iconMap: Record<string, any> = {
+                BookOpen,
+                Calculator,
+                FlaskConical,
+                Code2,
+                BookText,
+                Stethoscope,
+              };
+              const Icon = iconMap[item.title.includes('Physics') ? 'FlaskConical' : item.title.includes('Anatomy') ? 'Stethoscope' : item.title.includes('Progress') ? 'BarChart2' : 'BookOpen'];
+
+              return (
+                <div key={`${item.title}-${index}`} onClick={() => navigate(item.path)} className="cursor-pointer">
+                  <CourseCard 
+                    title={item.title}
+                    progress={item.progress}
+                    icon={Icon}
+                    colorClass={item.colorClass}
+                    bgClass={item.bgClass}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 

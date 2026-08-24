@@ -9,6 +9,67 @@ const JWT_SECRET = process.env.JWT_SECRET || 'study_buddy_super_secret_dev_key';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+const normalizeUserForResponse = (user: any) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  studentProfile: user.studentProfile || null,
+});
+
+export const getMe = async (req: any, res: Response): Promise<void> => {
+  try {
+    const db = getDb();
+    const user = db.users.find((entry: any) => entry.id === req.user.id);
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({ user: normalizeUserForResponse(user) });
+  } catch (error) {
+    console.error('Me error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const updateStudentProfile = async (req: any, res: Response): Promise<void> => {
+  try {
+    const { studentProfile } = req.body;
+
+    if (!studentProfile || typeof studentProfile !== 'object') {
+      res.status(400).json({ error: 'A valid studentProfile object is required' });
+      return;
+    }
+
+    const db = getDb();
+    const userIndex = db.users.findIndex((entry: any) => entry.id === req.user.id);
+
+    if (userIndex === -1) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    db.users[userIndex] = {
+      ...db.users[userIndex],
+      name: req.body.name || db.users[userIndex].name || req.user.name,
+      studentProfile,
+      updatedAt: new Date().toISOString(),
+    };
+
+    saveDb(db);
+
+    res.status(200).json({
+      message: 'Student profile updated successfully',
+      user: normalizeUserForResponse(db.users[userIndex]),
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
@@ -27,8 +88,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const id = crypto.randomUUID();
-    
-    const user = { id, name, email, passwordHash, role: 'STUDENT', createdAt: new Date().toISOString() };
+    const user = { id, name, email, passwordHash, role: 'STUDENT', studentProfile: null, createdAt: new Date().toISOString() };
     db.users.push(user);
     saveDb(db);
 
@@ -37,7 +97,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({
       message: 'User created successfully',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: normalizeUserForResponse(user),
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -56,7 +116,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const db = getDb();
     const user = db.users.find((u: any) => u.email === email);
-    
+
     if (!user) {
       res.status(400).json({ error: 'Invalid credentials' });
       return;
@@ -73,7 +133,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       message: 'Logged in successfully',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: normalizeUserForResponse(user),
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -92,12 +152,12 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
     const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
-    
+
     if (!googleRes.ok) {
       res.status(400).json({ error: 'Invalid Google token' });
       return;
     }
-    
+
     const payload = await googleRes.json();
 
     const email = payload.email;
@@ -110,7 +170,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
       const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
       const passwordHash = await bcrypt.hash(randomPassword, 10);
       const id = crypto.randomUUID();
-      user = { id, name, email, passwordHash, role: 'STUDENT', createdAt: new Date().toISOString() };
+      user = { id, name, email, passwordHash, role: 'STUDENT', studentProfile: null, createdAt: new Date().toISOString() };
       db.users.push(user);
       saveDb(db);
     }
@@ -120,7 +180,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
     res.status(200).json({
       message: 'Logged in successfully via Google',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: normalizeUserForResponse(user),
     });
   } catch (error) {
     console.error('Google login error:', error);

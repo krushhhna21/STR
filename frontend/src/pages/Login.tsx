@@ -25,12 +25,13 @@ export const Login: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      
-      const { token, user } = await res.json();
-      if (!res.ok) throw new Error(user?.error || 'Login failed');
-      
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+
+      const { token, user } = data;
       setAuth(user, token);
-      const from = location.state?.from?.pathname || '/app';
+      const from = location.state?.from?.pathname || (user.studentProfile ? '/app' : '/onboarding/student-details');
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -48,13 +49,14 @@ export const Login: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ access_token: tokenResponse.access_token }),
         });
-        const { token, user } = await res.json();
-        if (!res.ok) throw new Error(user?.error || 'Google login failed');
-        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Google login failed');
+
+        const { token, user } = data;
         setAuth(user, token);
-        const from = location.state?.from?.pathname || '/app';
+        const from = location.state?.from?.pathname || (user.studentProfile ? '/app' : '/onboarding/student-details');
         navigate(from, { replace: true });
-      } catch(err: any) {
+      } catch (err: any) {
         setError(err.message || 'Google login failed');
       } finally {
         setLoading(false);

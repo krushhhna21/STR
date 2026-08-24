@@ -14,8 +14,8 @@ export const AdminLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  // Basic role check
-  if (user?.role !== 'admin') {
+  const userRole = (user?.role ?? '').toLowerCase();
+  if (userRole !== 'admin' && userRole !== 'administrator') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
