@@ -12,6 +12,11 @@ interface Category {
 export const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
@@ -20,18 +25,63 @@ export const CategoryManager: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
+      setErrorMsg('');
       const authToken = token || localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/api/admin/categories`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(data);
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to fetch categories');
       }
+
+      const data = await res.json();
+      setCategories(data);
     } catch (err) {
       console.error('Failed to fetch categories', err);
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to fetch categories');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) {
+      setErrorMsg('Category name is required');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setErrorMsg('');
+      const authToken = token || localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          name: newCategoryName.trim(),
+          description: newCategoryDescription.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create category');
+      }
+
+      setCategories((prev) => [...prev, data]);
+      setNewCategoryName('');
+      setNewCategoryDescription('');
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Failed to create category', err);
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to create category');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -56,11 +106,73 @@ export const CategoryManager: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
           <p className="text-gray-500 mt-1">Manage top-level course categories.</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+        <button
+          onClick={() => {
+            setErrorMsg('');
+            setShowAddModal(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+        >
           <Plus size={18} />
           Add Category
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {errorMsg}
+        </div>
+      )}
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Add Category</h2>
+            <form onSubmit={handleAddCategory} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Category Name</label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="e.g. Engineering"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                <textarea
+                  value={newCategoryDescription}
+                  onChange={(e) => setNewCategoryDescription(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Brief category description"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Adding...' : 'Add Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-left">

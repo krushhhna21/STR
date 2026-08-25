@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import { initDb } from './utils/db';
+import { initContentDb } from './utils/contentDb';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 initDb();
+initContentDb();
 
 // Routes
 app.use('/api/auth', authRoutes);

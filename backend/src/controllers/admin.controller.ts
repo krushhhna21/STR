@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { getDb, saveDb } from '../utils/db';
 import { randomUUID } from 'crypto';
+import {
+  createContentItem,
+  deleteContentItemById,
+  listContentItems,
+} from '../utils/contentDb';
 
 export const getCategories = async (req: Request, res: Response) => {
   try {
@@ -88,6 +93,67 @@ export const deleteStream = async (req: Request, res: Response) => {
     const db = getDb();
     db.streams = db.streams.filter((s: any) => s.id !== id);
     saveDb(db);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getContentItems = async (req: Request, res: Response) => {
+  try {
+    const { category, stream, subject, type } = req.query;
+    const items = listContentItems({
+      category: typeof category === 'string' ? category : undefined,
+      stream: typeof stream === 'string' ? stream : undefined,
+      subject: typeof subject === 'string' ? subject : undefined,
+      type: typeof type === 'string' ? type : undefined,
+    });
+
+    res.json(items);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const createContent = async (req: Request, res: Response) => {
+  try {
+    const { category, stream, year, subject, type, title, linkOrFile, meta } = req.body;
+
+    if (!category || !stream || !year || !subject || !type || !title) {
+      res.status(400).json({ error: 'category, stream, year, subject, type and title are required' });
+      return;
+    }
+
+    const newItem = createContentItem({
+      id: randomUUID(),
+      category,
+      stream,
+      year,
+      subject,
+      type,
+      title,
+      linkOrFile: linkOrFile || '',
+      meta: meta || 'Added by Admin',
+    });
+
+    res.status(201).json(newItem);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const deleteContent = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || '');
+    if (!id) {
+      res.status(400).json({ error: 'Content item id is required' });
+      return;
+    }
+    const deleted = deleteContentItemById(id);
+    if (!deleted) {
+      res.status(404).json({ error: 'Content item not found' });
+      return;
+    }
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

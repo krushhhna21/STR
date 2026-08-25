@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { studyCategories } from '../../data/studyData';
 import { Upload, BookOpen, Video, FileText, Trash2, CheckCircle2, FolderOpen, Sparkles } from 'lucide-react';
+import { API_BASE_URL } from '../../config/api';
 
 interface UploadedItem {
   id: string;
@@ -25,11 +26,9 @@ export const ContentManager: React.FC = () => {
   const [linkOrFile, setLinkOrFile] = useState('');
   const [meta, setMeta] = useState('');
 
-  const [items, setItems] = useState<UploadedItem[]>([
-    { id: '1', category: 'engineering', stream: 'cse', year: '3rd Year', subject: 'dbms', type: 'book', title: 'Database System Concepts', linkOrFile: 'dbms-silberschatz.pdf', meta: 'Silberschatz & Korth' },
-    { id: '2', category: 'engineering', stream: 'cse', year: '3rd Year', subject: 'dbms', type: 'video', title: 'Mastering SQL Queries & Joins', linkOrFile: 'https://youtube.com/watch?v=sample', meta: 'Duration: 28 min' },
-    { id: '3', category: 'engineering', stream: 'cse', year: '3rd Year', subject: 'dbms', type: 'resource', title: 'Chapter 1-4 DBMS Notes PDF', linkOrFile: 'dbms-notes.pdf', meta: 'Lecture Notes • 4.2 MB' }
-  ]);
+  const [items, setItems] = useState<UploadedItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -45,36 +44,103 @@ export const ContentManager: React.FC = () => {
     }
   }, [selectedCategory, selectedStream, availableSubjects, selectedSubject]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const loadItems = async () => {
+      setLoading(true);
+      setErrorMsg('');
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/content`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load content items');
+        setItems(Array.isArray(data) ? data : []);
+      } catch (error: any) {
+        setErrorMsg(error.message || 'Could not load content items');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadItems();
+  }, []);
+
   const groupedItems = useMemo(() => {
     return items.filter((item) => item.category === selectedCategory);
   }, [items, selectedCategory]);
 
-  const handleAddContent = (e: React.FormEvent) => {
+  const handleAddContent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
 
-    const newItem: UploadedItem = {
-      id: `item-${Date.now()}`,
-      category: selectedCategory,
-      stream: selectedStream,
-      year: selectedYear,
-      subject: selectedSubject,
-      type: contentType,
-      title,
-      linkOrFile: linkOrFile || 'resource-link.pdf',
-      meta: meta || 'Added by Admin'
-    };
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setErrorMsg('Missing auth token. Please login again.');
+      return;
+    }
 
-    setItems((prev) => [newItem, ...prev]);
-    setTitle('');
-    setLinkOrFile('');
-    setMeta('');
-    setSuccessMsg('Content uploaded and assigned to the selected stream.');
-    window.setTimeout(() => setSuccessMsg(''), 3500);
+    setErrorMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          category: selectedCategory,
+          stream: selectedStream,
+          year: selectedYear,
+          subject: selectedSubject,
+          type: contentType,
+          title,
+          linkOrFile: linkOrFile || 'resource-link.pdf',
+          meta: meta || 'Added by Admin',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      setItems((prev) => [data as UploadedItem, ...prev]);
+      setTitle('');
+      setLinkOrFile('');
+      setMeta('');
+      setSuccessMsg('Content uploaded and assigned to the selected stream.');
+      window.setTimeout(() => setSuccessMsg(''), 3500);
+    } catch (error: any) {
+      setErrorMsg(error.message || 'Could not upload content');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+  const handleDelete = async (id: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setErrorMsg('Missing auth token. Please login again.');
+      return;
+    }
+
+    setErrorMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/content/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (error: any) {
+      setErrorMsg(error.message || 'Could not delete content');
+    }
   };
 
   return (
@@ -94,6 +160,12 @@ export const ContentManager: React.FC = () => {
       {successMsg && (
         <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs rounded-2xl flex items-center gap-2">
           <CheckCircle2 size={18} /> {successMsg}
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-4 bg-red-50 border border-red-100 text-red-700 font-bold text-xs rounded-2xl">
+          {errorMsg}
         </div>
       )}
 
@@ -240,7 +312,7 @@ export const ContentManager: React.FC = () => {
       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Uploaded content for {currentCategoryObj.name}</h2>
-          <span className="text-[11px] font-bold text-gray-500">{groupedItems.length} items</span>
+          <span className="text-[11px] font-bold text-gray-500">{loading ? 'Loading...' : `${groupedItems.length} items`}</span>
         </div>
 
         <div className="overflow-x-auto">
