@@ -10,7 +10,12 @@ import {
 export const getCategories = async (req: Request, res: Response) => {
   try {
     const db = getDb();
-    res.json(db.categories || []);
+    const categories = (db.categories || []).map((category: any) => ({
+      ...category,
+      streams: (db.streams || []).filter((stream: any) => stream.categoryId === category.id),
+    }));
+
+    res.json(categories);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -21,12 +26,22 @@ export const createCategory = async (req: Request, res: Response) => {
     const { name, description, icon, color, bg } = req.body;
     const db = getDb();
     if (!db.categories) db.categories = [];
+    if (!db.streams) db.streams = [];
     
     const category = { id: randomUUID(), name, description, icon, color, bg, createdAt: new Date().toISOString() };
     db.categories.push(category);
+
+    const defaultStream = {
+      id: randomUUID(),
+      name: 'General Stream',
+      icon: 'layers',
+      categoryId: category.id,
+      createdAt: new Date().toISOString(),
+    };
+    db.streams.push(defaultStream);
     saveDb(db);
     
-    res.json(category);
+    res.status(201).json({ ...category, streams: [defaultStream] });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

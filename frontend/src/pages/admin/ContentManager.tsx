@@ -3,6 +3,22 @@ import { studyCategories } from '../../data/studyData';
 import { Upload, BookOpen, Video, FileText, Trash2, CheckCircle2, FolderOpen, Sparkles } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  desc?: string;
+  color?: string;
+  bg?: string;
+  streams: Array<{
+    id: string;
+    name: string;
+    subjects: Array<{
+      id: string;
+      name: string;
+    }>;
+  }>;
+}
+
 interface UploadedItem {
   id: string;
   category: string;
@@ -16,6 +32,7 @@ interface UploadedItem {
 }
 
 export const ContentManager: React.FC = () => {
+  const [adminCategories, setAdminCategories] = useState<CategoryOption[]>([]);
   const [selectedCategory, setSelectedCategory] = useState(studyCategories[0].id);
   const [selectedStream, setSelectedStream] = useState(studyCategories[0].streams[0].id);
   const [selectedYear, setSelectedYear] = useState('3rd Year (Degree / B.Tech)');
@@ -32,13 +49,37 @@ export const ContentManager: React.FC = () => {
 
   const [successMsg, setSuccessMsg] = useState('');
 
-  const currentCategoryObj = studyCategories.find((c) => c.id === selectedCategory) || studyCategories[0];
+  const mergedCategories = useMemo<CategoryOption[]>(() => {
+    const builtInCategories: CategoryOption[] = studyCategories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      desc: category.desc,
+      color: category.color,
+      bg: category.bg,
+      streams: category.streams.map((stream) => ({
+        id: stream.id,
+        name: stream.name,
+        subjects: stream.subjects.map((subject) => ({
+          id: subject.id,
+          name: subject.name,
+        })),
+      })),
+    }));
+
+    const extraCategories = adminCategories.filter(
+      (category) => !builtInCategories.some((existing) => existing.id === category.id)
+    );
+
+    return [...builtInCategories, ...extraCategories];
+  }, [adminCategories]);
+
+  const currentCategoryObj = mergedCategories.find((c) => c.id === selectedCategory) || mergedCategories[0];
   const availableStreams = currentCategoryObj.streams;
   const currentStreamObj = availableStreams.find((s) => s.id === selectedStream) || availableStreams[0];
   const availableSubjects = currentStreamObj ? currentStreamObj.subjects : [];
 
   useEffect(() => {
-    const fallbackSubject = availableSubjects[0]?.id || 'dbms';
+    const fallbackSubject = availableSubjects[0]?.id || 'General Subject';
     if (!availableSubjects.some((subject) => subject.id === selectedSubject)) {
       setSelectedSubject(fallbackSubject);
     }
@@ -69,6 +110,62 @@ export const ContentManager: React.FC = () => {
 
     loadItems();
   }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const loadCategories = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load categories');
+
+        const backendCategories: CategoryOption[] = Array.isArray(data)
+          ? data.map((category: any) => ({
+              id: category.id,
+              name: category.name,
+              desc: category.description || '',
+              color: category.color || 'text-indigo-600',
+              bg: category.bg || 'bg-indigo-100',
+              streams: Array.isArray(category.streams)
+                ? category.streams.map((stream: any) => ({
+                    id: stream.id,
+                    name: stream.name,
+                    subjects: Array.isArray(stream.subjects)
+                      ? stream.subjects.map((subject: any) => ({
+                          id: subject.id,
+                          name: subject.name,
+                        }))
+                      : [],
+                  }))
+                : [],
+            }))
+          : [];
+
+        setAdminCategories(backendCategories);
+      } catch (error: any) {
+        setErrorMsg(error.message || 'Could not load categories');
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (!mergedCategories.some((category) => category.id === selectedCategory)) {
+      const firstCategory = mergedCategories[0];
+      if (firstCategory) {
+        setSelectedCategory(firstCategory.id);
+        setSelectedStream(firstCategory.streams[0]?.id || '');
+      }
+    }
+  }, [mergedCategories, selectedCategory]);
 
   const groupedItems = useMemo(() => {
     return items.filter((item) => item.category === selectedCategory);
@@ -153,7 +250,7 @@ export const ContentManager: React.FC = () => {
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-700">
-          <Sparkles size={14} /> {studyCategories.length} learning categories active
+          <Sparkles size={14} /> {mergedCategories.length} learning categories active
         </div>
       </div>
 
@@ -175,7 +272,7 @@ export const ContentManager: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
-          {studyCategories.map((category) => (
+          {mergedCategories.map((category) => (
             <button
               key={category.id}
               type="button"
@@ -190,7 +287,9 @@ export const ContentManager: React.FC = () => {
               }`}
             >
               <div className="text-xs font-black text-gray-900">{category.name}</div>
-              <div className="mt-1 text-[10px] text-gray-500">{category.streams.length} streams</div>
+              <div className="mt-1 text-[10px] text-gray-500">
+                {category.streams.length} streams{category.streams.length === 0 ? ' • configure streams to upload' : ''}
+              </div>
             </button>
           ))}
         </div>
@@ -202,11 +301,16 @@ export const ContentManager: React.FC = () => {
               <select
                 value={selectedStream}
                 onChange={(e) => setSelectedStream(e.target.value)}
+                disabled={availableStreams.length === 0}
                 className="w-full px-3.5 py-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-indigo-600 outline-none"
               >
-                {availableStreams.map((stream) => (
-                  <option key={stream.id} value={stream.id}>{stream.name}</option>
-                ))}
+                {availableStreams.length === 0 ? (
+                  <option value="">No streams configured yet</option>
+                ) : (
+                  availableStreams.map((stream) => (
+                    <option key={stream.id} value={stream.id}>{stream.name}</option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -228,15 +332,25 @@ export const ContentManager: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Subject</label>
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="w-full px-3.5 py-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-indigo-600 outline-none"
-              >
-                {availableSubjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
-              </select>
+              {availableSubjects.length === 0 ? (
+                <input
+                  type="text"
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  placeholder="Enter a subject name"
+                  className="w-full px-3.5 py-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-indigo-600 outline-none"
+                />
+              ) : (
+                <select
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  className="w-full px-3.5 py-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-indigo-600 outline-none"
+                >
+                  {availableSubjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>{subject.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
