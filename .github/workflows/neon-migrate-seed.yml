@@ -1,0 +1,42 @@
+name: "Neon Migrate & Seed"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate-seed:
+    name: Migrate and Seed Neon
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Push Prisma schema to Neon
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: npx prisma db push --accept-data-loss
+
+      - name: Generate Prisma client
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: npx prisma generate
+
+      - name: Seed studyData into Neon
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: npx ts-node src/scripts/seedStudyDataToPrisma.ts
+
+      - name: Success
+        run: echo "Neon migration and seed completed"
