@@ -1,9 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import { studyCategories } from '../data/studyData';
 import { API_BASE_URL } from '../config/api';
 import { GraduationCap, User, Mail, Phone, CheckCircle2, ArrowRight, BookOpenCheck } from 'lucide-react';
+
+interface CategoryOption {
+  id: string;
+  name: string;
+  description?: string;
+  streams: Array<{
+    id: string;
+    name: string;
+    subjects?: Array<{
+      id: string;
+      name: string;
+    }>;
+  }>;
+}
 
 const educationTypes = [
   { id: 'school', label: 'School Student', description: 'Class 9-12, CBSE/ICSE/State Board' },
@@ -25,6 +39,8 @@ export const StudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const { user, setAuth } = useAuthStore();
 
+  const [catalogCategories, setCatalogCategories] = useState<CategoryOption[]>([]);
+
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.studentProfile?.phone || '');
@@ -43,7 +59,29 @@ export const StudentDetails: React.FC = () => {
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
 
-  const currentCategoryObj = studyCategories.find(c => c.id === selectedCategory) || studyCategories[0];
+  const mergedCategories = useMemo<CategoryOption[]>(() => {
+    const builtInCategories: CategoryOption[] = studyCategories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      description: category.desc,
+      streams: category.streams.map((stream) => ({
+        id: stream.id,
+        name: stream.name,
+        subjects: stream.subjects.map((subject) => ({
+          id: subject.id,
+          name: subject.name,
+        })),
+      })),
+    }));
+
+    const extraCategories = catalogCategories.filter(
+      (category) => !builtInCategories.some((existing) => existing.id === category.id)
+    );
+
+    return [...builtInCategories, ...extraCategories];
+  }, [catalogCategories]);
+
+  const currentCategoryObj = mergedCategories.find(c => c.id === selectedCategory) || mergedCategories[0];
   const availableStreams = currentCategoryObj.streams;
 
   const studentSummary = useMemo(() => {
@@ -58,6 +96,52 @@ export const StudentDetails: React.FC = () => {
     }
     return `${selectedYearGrade}`;
   }, [educationType, classLevel, board, streamTag, branch, scheme, selectedYearGrade, course]);
+
+  useEffect(() => {
+    const loadCatalog = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/catalog/categories`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load course catalog');
+
+        const backendCategories: CategoryOption[] = Array.isArray(data)
+          ? data.map((category: any) => ({
+              id: category.id,
+              name: category.name,
+              description: category.description || '',
+              streams: Array.isArray(category.streams)
+                ? category.streams.map((stream: any) => ({
+                    id: stream.id,
+                    name: stream.name,
+                    subjects: Array.isArray(stream.subjects)
+                      ? stream.subjects.map((subject: any) => ({
+                          id: subject.id,
+                          name: subject.name,
+                        }))
+                      : [],
+                  }))
+                : [],
+            }))
+          : [];
+
+        setCatalogCategories(backendCategories);
+      } catch {
+        setCatalogCategories([]);
+      }
+    };
+
+    loadCatalog();
+  }, []);
+
+  useEffect(() => {
+    if (!mergedCategories.some((category) => category.id === selectedCategory)) {
+      const firstCategory = mergedCategories[0];
+      if (firstCategory) {
+        setSelectedCategory(firstCategory.id);
+        setSelectedStream(firstCategory.streams[0]?.id || '');
+      }
+    }
+  }, [mergedCategories, selectedCategory]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,7 +286,7 @@ export const StudentDetails: React.FC = () => {
                           medical: 'mbbs-phase1',
                           commerce: 'finance-bba',
                         };
-                        setSelectedStream(defaultStreamMap[nextEducationType] || 'cse');
+                        setSelectedStream(defaultStreamMap[nextEducationType] || mergedCategories.find((category) => category.id === 'engineering')?.streams[0]?.id || 'cse');
                       }}
                       className={`p-3.5 rounded-2xl border text-left transition-all ${educationType === option.id ? 'border-[#6C3BC7] bg-indigo-50/60 shadow-sm' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
                     >
@@ -226,14 +310,17 @@ export const StudentDetails: React.FC = () => {
                     onChange={(e) => {
                       const nextCategory = e.target.value;
                       setSelectedCategory(nextCategory);
-                      const nextCategoryObj = studyCategories.find((category) => category.id === nextCategory);
+                      const nextCategoryObj = mergedCategories.find((category) => category.id === nextCategory);
                       if (nextCategoryObj && nextCategoryObj.streams.length > 0) {
                         setSelectedStream(nextCategoryObj.streams[0].id);
+                      } else {
+                        setSelectedStream('');
+                        setEducationType('other');
                       }
                     }}
                     className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer"
                   >
-                    {studyCategories.map((category) => (
+                    {mergedCategories.map((category) => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
@@ -246,9 +333,13 @@ export const StudentDetails: React.FC = () => {
                     onChange={(e) => setSelectedStream(e.target.value)}
                     className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer"
                   >
-                    {availableStreams.map((stream) => (
-                      <option key={stream.id} value={stream.id}>{stream.name}</option>
-                    ))}
+                    {availableStreams.length === 0 ? (
+                      <option value="">No streams available</option>
+                    ) : (
+                      availableStreams.map((stream) => (
+                        <option key={stream.id} value={stream.id}>{stream.name}</option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>

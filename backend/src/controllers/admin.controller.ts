@@ -21,6 +21,32 @@ export const getCategories = async (req: Request, res: Response) => {
   }
 };
 
+export const getPublicCategories = async (req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    const categories = (db.categories || []).map((category: any) => ({
+      id: category.id,
+      name: category.name,
+      description: category.description || '',
+      icon: category.icon || '',
+      color: category.color || '',
+      bg: category.bg || '',
+      streams: (db.streams || [])
+        .filter((stream: any) => stream.categoryId === category.id)
+        .map((stream: any) => ({
+          id: stream.id,
+          name: stream.name,
+          icon: stream.icon || '',
+          subjects: [],
+        })),
+    }));
+
+    res.json(categories);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const createCategory = async (req: Request, res: Response) => {
   try {
     const { name, description, icon, color, bg } = req.body;

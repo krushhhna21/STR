@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
+import catalogRoutes from './routes/catalog.routes';
 import { initDb } from './utils/db';
 import { initContentDb } from './utils/contentDb';
 
@@ -20,6 +21,7 @@ initContentDb();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
