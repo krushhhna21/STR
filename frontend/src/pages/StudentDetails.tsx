@@ -1,147 +1,99 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import { studyCategories } from '../data/studyData';
 import { API_BASE_URL } from '../config/api';
 import { GraduationCap, User, Mail, Phone, CheckCircle2, ArrowRight, BookOpenCheck } from 'lucide-react';
 
-interface CategoryOption {
-  id: string;
-  name: string;
-  description?: string;
-  streams: Array<{
-    id: string;
-    name: string;
-    subjects?: Array<{
-      id: string;
-      name: string;
-    }>;
-  }>;
-}
-
 const educationTypes = [
-  { id: 'school', label: 'School Student', description: 'Class 9-12, CBSE/ICSE/State Board' },
-  { id: 'engineering', label: 'Engineering', description: 'B.Tech / B.E. / Diploma' },
-  { id: 'medical', label: 'Medical', description: 'MBBS / BDS / NEET / Healthcare' },
-  { id: 'diploma', label: 'Diploma', description: 'Polytechnic / Technical Courses' },
-  { id: 'commerce', label: 'Commerce', description: 'B.Com / BBA / CA / Business' },
+  { id: 'school', label: 'CBSE School', description: 'Class 9th, 10th, 11th, 12th' },
+  { id: 'engineering', label: 'Diploma Engineering', description: 'All branches with year-wise path' },
+  { id: 'medical', label: 'Pharmacy', description: 'B.Pharm, Pharm D, D.Pharm' },
   { id: 'other', label: 'Other', description: 'Competitive / Career / Skill-based' },
-];
+] as const;
 
 const schoolBoards = ['CBSE', 'ICSE', 'State Board', 'IB', 'Others'];
 const states = ['Karnataka', 'Tamil Nadu', 'Maharashtra', 'Delhi', 'Telangana', 'Kerala', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Other'];
 const classOptions = ['Class 9', 'Class 10', 'Class 11', 'Class 12'];
-const schoolStreams = ['PCM', 'PCB', 'PCMB', 'Commerce', 'Arts'];
-const engineeringBranches = ['CSE', 'ECE', 'ME', 'EEE', 'Civil', 'Mechanical', 'AI & DS'];
-const schemes = ['AICTE 2024', 'State Scheme', 'VTU', 'Anna University', 'Autonomous'];
+const schoolStreams = ['PCM', 'PCB', 'PCMB'];
+const diplomaBranches = ['CSE', 'ECE', 'ME', 'EEE', 'Civil', 'Mechanical', 'AI & DS'];
+const pharmacyCourses = ['B.Pharm', 'Pharm D', 'D.Pharm'];
+const pharmacyYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+
+const resolveCategory = (educationType: string) => {
+  if (educationType === 'school') return 'cbse';
+  if (educationType === 'engineering') return 'diploma';
+  if (educationType === 'medical') return 'pharmacy';
+  return 'cbse';
+};
+
+const defaultStreamForCategory = (categoryId: string) => {
+  const category = studyCategories.find((item) => item.id === categoryId) || studyCategories[0];
+  return category.streams[0]?.id || '';
+};
 
 export const StudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const { user, setAuth } = useAuthStore();
 
-  const [catalogCategories, setCatalogCategories] = useState<CategoryOption[]>([]);
-
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.studentProfile?.phone || '');
-  const [educationType, setEducationType] = useState<'school' | 'engineering' | 'diploma' | 'medical' | 'commerce' | 'other'>(user?.studentProfile?.educationType || 'engineering');
-  const [selectedCategory, setSelectedCategory] = useState(user?.studentProfile?.category || 'engineering');
-  const [selectedStream, setSelectedStream] = useState(user?.studentProfile?.stream || 'cse');
-  const [selectedYearGrade, setSelectedYearGrade] = useState(user?.studentProfile?.yearGrade || '3rd Year (Degree / B.Tech)');
+  const [educationType, setEducationType] = useState<'school' | 'engineering' | 'medical' | 'other'>(user?.studentProfile?.educationType || 'school');
+  const [selectedCategory, setSelectedCategory] = useState(user?.studentProfile?.category || 'cbse');
+  const [selectedStream, setSelectedStream] = useState(user?.studentProfile?.stream || defaultStreamForCategory('cbse'));
+  const [selectedYearGrade, setSelectedYearGrade] = useState(user?.studentProfile?.yearGrade || 'Class 9');
   const [board, setBoard] = useState(user?.studentProfile?.board || 'CBSE');
   const [state, setState] = useState(user?.studentProfile?.state || 'Karnataka');
-  const [classLevel, setClassLevel] = useState(user?.studentProfile?.classLevel || 'Class 12');
+  const [classLevel, setClassLevel] = useState(user?.studentProfile?.classLevel || 'Class 9');
   const [streamTag, setStreamTag] = useState(user?.studentProfile?.streamTag || 'PCM');
   const [branch, setBranch] = useState(user?.studentProfile?.branch || 'CSE');
   const [scheme, setScheme] = useState(user?.studentProfile?.scheme || 'AICTE 2024');
-  const [course, setCourse] = useState(user?.studentProfile?.course || 'B.Tech');
-
+  const [course, setCourse] = useState(user?.studentProfile?.course || 'B.Pharm');
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
 
-  const mergedCategories = useMemo<CategoryOption[]>(() => {
-    const builtInCategories: CategoryOption[] = studyCategories.map((category) => ({
-      id: category.id,
-      name: category.name,
-      description: category.desc,
-      streams: category.streams.map((stream) => ({
-        id: stream.id,
-        name: stream.name,
-        subjects: stream.subjects.map((subject) => ({
-          id: subject.id,
-          name: subject.name,
-        })),
-      })),
-    }));
-
-    const extraCategories = catalogCategories.filter(
-      (category) => !builtInCategories.some((existing) => existing.id === category.id)
-    );
-
-    return [...builtInCategories, ...extraCategories];
-  }, [catalogCategories]);
-
-  const currentCategoryObj = mergedCategories.find(c => c.id === selectedCategory) || mergedCategories[0];
+  const currentCategoryObj = studyCategories.find((item) => item.id === selectedCategory) || studyCategories[0];
   const availableStreams = currentCategoryObj.streams;
 
   const studentSummary = useMemo(() => {
-    if (educationType === 'school') {
+    if (selectedCategory === 'cbse') {
       return `${classLevel} • ${board} • ${streamTag}`;
     }
-    if (educationType === 'engineering' || educationType === 'diploma') {
+    if (selectedCategory === 'diploma') {
       return `${branch} • ${scheme} • ${selectedYearGrade}`;
     }
-    if (educationType === 'medical') {
-      return `${streamTag} • ${course} • ${selectedYearGrade}`;
+    if (selectedCategory === 'pharmacy') {
+      return `${course} • ${selectedYearGrade}`;
     }
-    return `${selectedYearGrade}`;
-  }, [educationType, classLevel, board, streamTag, branch, scheme, selectedYearGrade, course]);
+    return selectedYearGrade;
+  }, [board, branch, classLevel, course, scheme, selectedCategory, selectedYearGrade, streamTag]);
 
-  useEffect(() => {
-    const loadCatalog = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/catalog/categories`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load course catalog');
+  const handleEducationTypeChange = (nextType: typeof educationType) => {
+    setEducationType(nextType);
+    const nextCategory = resolveCategory(nextType);
+    setSelectedCategory(nextCategory);
+    setSelectedStream(defaultStreamForCategory(nextCategory));
 
-        const backendCategories: CategoryOption[] = Array.isArray(data)
-          ? data.map((category: any) => ({
-              id: category.id,
-              name: category.name,
-              description: category.description || '',
-              streams: Array.isArray(category.streams)
-                ? category.streams.map((stream: any) => ({
-                    id: stream.id,
-                    name: stream.name,
-                    subjects: Array.isArray(stream.subjects)
-                      ? stream.subjects.map((subject: any) => ({
-                          id: subject.id,
-                          name: subject.name,
-                        }))
-                      : [],
-                  }))
-                : [],
-            }))
-          : [];
-
-        setCatalogCategories(backendCategories);
-      } catch {
-        setCatalogCategories([]);
-      }
-    };
-
-    loadCatalog();
-  }, []);
-
-  useEffect(() => {
-    if (!mergedCategories.some((category) => category.id === selectedCategory)) {
-      const firstCategory = mergedCategories[0];
-      if (firstCategory) {
-        setSelectedCategory(firstCategory.id);
-        setSelectedStream(firstCategory.streams[0]?.id || '');
-      }
+    if (nextType === 'school') {
+      setClassLevel('Class 9');
+      setBoard('CBSE');
+      setStreamTag('PCM');
+      setSelectedYearGrade('Class 9');
     }
-  }, [mergedCategories, selectedCategory]);
+
+    if (nextType === 'engineering') {
+      setBranch('CSE');
+      setScheme('AICTE 2024');
+      setCourse('Diploma');
+      setSelectedYearGrade('1st Year');
+    }
+
+    if (nextType === 'medical') {
+      setCourse('B.Pharm');
+      setSelectedYearGrade('1st Year');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,8 +103,7 @@ export const StudentDetails: React.FC = () => {
       return;
     }
 
-    const streamObj = availableStreams.find(s => s.id === selectedStream) || availableStreams[0];
-
+    const streamObj = availableStreams.find((item) => item.id === selectedStream) || availableStreams[0];
     const studentProfile = {
       category: selectedCategory,
       categoryName: currentCategoryObj.name,
@@ -199,8 +150,8 @@ export const StudentDetails: React.FC = () => {
       }
 
       navigate('/app');
-    } catch (error: any) {
-      setError(error.message || 'Unable to save your student profile.');
+    } catch (submissionError: any) {
+      setError(submissionError.message || 'Unable to save your student profile.');
     }
   };
 
@@ -214,9 +165,7 @@ export const StudentDetails: React.FC = () => {
             <GraduationCap size={36} />
           </div>
           <h1 className="text-2xl lg:text-3xl font-black text-[#1E1B4B]">Academic Profile Setup</h1>
-          <p className="text-gray-500 font-medium text-sm mt-1">
-            Tell us about your learning path so your dashboard stays personalized
-          </p>
+          <p className="text-gray-500 font-medium text-sm mt-1">Tell us your board and track so your dashboard stays focused</p>
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -273,21 +222,7 @@ export const StudentDetails: React.FC = () => {
                     <button
                       key={option.id}
                       type="button"
-                      onClick={() => {
-                        const nextEducationType = option.id as typeof educationType;
-                        setEducationType(nextEducationType);
-
-                        const mappedCategory = nextEducationType === 'school' ? 'school' : nextEducationType === 'medical' ? 'medical' : nextEducationType === 'commerce' ? 'commerce' : 'engineering';
-                        setSelectedCategory(mappedCategory);
-
-                        const defaultStreamMap: Record<string, string> = {
-                          school: 'class12-jee',
-                          engineering: 'cse',
-                          medical: 'mbbs-phase1',
-                          commerce: 'finance-bba',
-                        };
-                        setSelectedStream(defaultStreamMap[nextEducationType] || mergedCategories.find((category) => category.id === 'engineering')?.streams[0]?.id || 'cse');
-                      }}
+                      onClick={() => handleEducationTypeChange(option.id)}
                       className={`p-3.5 rounded-2xl border text-left transition-all ${educationType === option.id ? 'border-[#6C3BC7] bg-indigo-50/60 shadow-sm' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -310,17 +245,12 @@ export const StudentDetails: React.FC = () => {
                     onChange={(e) => {
                       const nextCategory = e.target.value;
                       setSelectedCategory(nextCategory);
-                      const nextCategoryObj = mergedCategories.find((category) => category.id === nextCategory);
-                      if (nextCategoryObj && nextCategoryObj.streams.length > 0) {
-                        setSelectedStream(nextCategoryObj.streams[0].id);
-                      } else {
-                        setSelectedStream('');
-                        setEducationType('other');
-                      }
+                      const nextCategoryObj = studyCategories.find((category) => category.id === nextCategory);
+                      setSelectedStream(nextCategoryObj?.streams[0]?.id || '');
                     }}
                     className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer"
                   >
-                    {mergedCategories.map((category) => (
+                    {studyCategories.map((category) => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
@@ -333,18 +263,14 @@ export const StudentDetails: React.FC = () => {
                     onChange={(e) => setSelectedStream(e.target.value)}
                     className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer"
                   >
-                    {availableStreams.length === 0 ? (
-                      <option value="">No streams available</option>
-                    ) : (
-                      availableStreams.map((stream) => (
-                        <option key={stream.id} value={stream.id}>{stream.name}</option>
-                      ))
-                    )}
+                    {availableStreams.map((stream) => (
+                      <option key={stream.id} value={stream.id}>{stream.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              {educationType === 'school' && (
+              {selectedCategory === 'cbse' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Class</label>
@@ -376,28 +302,12 @@ export const StudentDetails: React.FC = () => {
                 </div>
               )}
 
-              {(educationType === 'engineering' || educationType === 'diploma') && (
+              {selectedCategory === 'diploma' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Branch</label>
                     <select value={branch} onChange={(e) => setBranch(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
-                      {engineeringBranches.map((item) => <option key={item} value={item}>{item}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Course</label>
-                    <select value={course} onChange={(e) => setCourse(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
-                      <option value="B.Tech">B.Tech</option>
-                      <option value="B.E.">B.E.</option>
-                      <option value="Diploma">Diploma</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Scheme</label>
-                    <select value={scheme} onChange={(e) => setScheme(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
-                      {schemes.map((item) => <option key={item} value={item}>{item}</option>)}
+                      {diplomaBranches.map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
                   </div>
 
@@ -410,38 +320,31 @@ export const StudentDetails: React.FC = () => {
                       <option value="4th Year">4th Year</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Scheme</label>
+                    <select value={scheme} onChange={(e) => setScheme(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
+                      <option value="AICTE 2024">AICTE 2024</option>
+                      <option value="State Scheme">State Scheme</option>
+                      <option value="Autonomous">Autonomous</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
-              {educationType === 'medical' && (
+              {selectedCategory === 'pharmacy' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Course</label>
                     <select value={course} onChange={(e) => setCourse(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
-                      <option value="MBBS">MBBS</option>
-                      <option value="BDS">BDS</option>
-                      <option value="BAMS">BAMS</option>
-                      <option value="Nursing">Nursing</option>
+                      {pharmacyCourses.map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Stream</label>
-                    <select value={streamTag} onChange={(e) => setStreamTag(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
-                      <option value="NEET">NEET</option>
-                      <option value="PCB">PCB</option>
-                      <option value="Health Sciences">Health Sciences</option>
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Academic Year</label>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Year</label>
                     <select value={selectedYearGrade} onChange={(e) => setSelectedYearGrade(e.target.value)} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6C3BC7] cursor-pointer">
-                      <option value="1st Year">1st Year</option>
-                      <option value="2nd Year">2nd Year</option>
-                      <option value="3rd Year">3rd Year</option>
-                      <option value="4th Year">4th Year</option>
-                      <option value="Final Year">Final Year</option>
+                      {pharmacyYears.map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
                   </div>
                 </div>

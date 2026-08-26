@@ -19,10 +19,10 @@ export const Home: React.FC = () => {
   const { todayFocusSeconds, tasks, toggleTask, resetStats } = useTimerStore();
 
   const profile = user?.studentProfile || {
-    streamName: 'Computer Science & Engineering (CSE)',
-    yearGrade: '3rd Year (Degree / B.Tech)',
-    categoryName: 'Engineering & Technology',
-    educationType: 'engineering',
+    streamName: 'Class 12th PCM',
+    yearGrade: 'Class 12',
+    categoryName: 'CBSE',
+    educationType: 'school',
     branch: 'CSE',
     streamTag: 'PCM',
     classLevel: 'Class 12',

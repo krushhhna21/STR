@@ -1,23 +1,23 @@
 import { studyCategories } from '../data/studyData';
 import type { StudentProfile } from '../store/auth';
 
-export type StudentEducationType = 'school' | 'engineering' | 'diploma' | 'medical' | 'commerce' | 'other';
+export type StudentEducationType = 'school' | 'engineering' | 'medical' | 'other';
 
 export const defaultStudentProfile: StudentProfile = {
-  category: 'engineering',
-  categoryName: 'Engineering & Technology',
-  stream: 'cse',
-  streamName: 'Computer Science & Engineering (CSE)',
-  yearGrade: '3rd Year (Degree / B.Tech)',
+  category: 'cbse',
+  categoryName: 'CBSE',
+  stream: 'class9',
+  streamName: 'Class 9th',
+  yearGrade: 'Class 9',
   phone: '+91 98765 43210',
-  educationType: 'engineering',
-  classLevel: '12th',
+  educationType: 'school',
+  classLevel: 'Class 9',
   board: 'CBSE',
   state: 'Karnataka',
   streamTag: 'PCM',
   branch: 'CSE',
   scheme: 'AICTE 2024',
-  course: 'B.Tech',
+  course: 'B.Pharm',
 };
 
 export const normalizeStudentProfile = (profile?: Partial<StudentProfile>): StudentProfile => ({
@@ -39,81 +39,80 @@ export const normalizeStudentProfile = (profile?: Partial<StudentProfile>): Stud
   course: profile?.course || defaultStudentProfile.course,
 });
 
-export const getAcademicContext = (profile?: Partial<StudentProfile>) => {
-  const normalized = normalizeStudentProfile(profile);
+const resolveCbseStream = (profile: StudentProfile) => {
+  const category = studyCategories.find((item) => item.id === 'cbse') || studyCategories[0];
+  const streamKey =
+    profile.classLevel?.includes('9') ? 'class9' :
+    profile.classLevel?.includes('10') ? 'class10' :
+    profile.classLevel?.includes('11') && profile.streamTag === 'PCB' ? 'class11-pcb' :
+    profile.classLevel?.includes('11') && profile.streamTag === 'PCMB' ? 'class11-pcmb' :
+    profile.classLevel?.includes('11') ? 'class11-pcm' :
+    profile.classLevel?.includes('12') && profile.streamTag === 'PCB' ? 'class12-pcb' :
+    profile.classLevel?.includes('12') && profile.streamTag === 'PCMB' ? 'class12-pcmb' :
+    'class12-pcm';
 
-  if (normalized.educationType === 'school') {
-    const schoolStream = normalized.streamTag === 'PCB' || normalized.streamTag === 'PCMB' || normalized.streamTag === 'Biology'
-      ? 'class12-neet'
-      : 'class12-jee';
-
-    const category = studyCategories.find((item) => item.id === 'school') || studyCategories[0];
-    const stream = category.streams.find((item) => item.id === schoolStream) || category.streams[0];
-
-    return {
-      category: 'school',
-      categoryName: category.name,
-      stream: stream.id,
-      streamName: stream.name,
-      defaultPath: `/app/study/${category.id}/${stream.id}`,
-    };
-  }
-
-  if (normalized.educationType === 'medical') {
-    const category = studyCategories.find((item) => item.id === 'medical') || studyCategories[0];
-    const stream = category.streams.find((item) => item.id === 'mbbs-phase1') || category.streams[0];
-
-    return {
-      category: 'medical',
-      categoryName: category.name,
-      stream: stream.id,
-      streamName: stream.name,
-      defaultPath: `/app/study/${category.id}/${stream.id}`,
-    };
-  }
-
-  if (normalized.educationType === 'diploma') {
-    const category = studyCategories.find((item) => item.id === 'engineering') || studyCategories[0];
-    const stream = category.streams.find((item) => item.id === 'me') || category.streams[0];
-
-    return {
-      category: 'engineering',
-      categoryName: category.name,
-      stream: stream.id,
-      streamName: stream.name,
-      defaultPath: `/app/study/engineering/${stream.id}`,
-    };
-  }
-
-  if (normalized.educationType === 'commerce') {
-    const category = studyCategories.find((item) => item.id === 'commerce') || studyCategories[0];
-    const stream = category.streams.find((item) => item.id === 'finance-bba') || category.streams[0];
-
-    return {
-      category: 'commerce',
-      categoryName: category.name,
-      stream: stream.id,
-      streamName: stream.name,
-      defaultPath: `/app/study/${category.id}/${stream.id}`,
-    };
-  }
-
-  const branchId =
-    normalized.branch === 'ECE' ? 'ece' :
-    normalized.branch === 'ME' ? 'me' :
-    normalized.branch === 'CSE' ? 'cse' :
-    'cse';
-
-  const category = studyCategories.find((item) => item.id === 'engineering') || studyCategories[0];
-  const stream = category.streams.find((item) => item.id === branchId) || category.streams[0];
+  const stream = category.streams.find((item) => item.id === streamKey) || category.streams[0];
 
   return {
-    category: 'engineering',
+    category: category.id,
     categoryName: category.name,
     stream: stream.id,
     streamName: stream.name,
     defaultPath: `/app/study/${category.id}/${stream.id}`,
   };
+};
+
+const resolveDiplomaStream = (profile: StudentProfile) => {
+  const category = studyCategories.find((item) => item.id === 'diploma') || studyCategories[0];
+  const branchId =
+    profile.branch === 'ECE' ? 'ece' :
+    profile.branch === 'ME' ? 'me' :
+    profile.branch === 'EEE' ? 'eee' :
+    profile.branch === 'Civil' ? 'civil' :
+    profile.branch === 'AI & DS' ? 'ai-ds' :
+    'cse';
+
+  const stream = category.streams.find((item) => item.id === branchId) || category.streams[0];
+
+  return {
+    category: category.id,
+    categoryName: category.name,
+    stream: stream.id,
+    streamName: stream.name,
+    defaultPath: `/app/study/${category.id}/${stream.id}`,
+  };
+};
+
+const resolvePharmacyStream = (profile: StudentProfile) => {
+  const category = studyCategories.find((item) => item.id === 'pharmacy') || studyCategories[0];
+  const streamId =
+    profile.course === 'Pharm D' ? 'pharmd' :
+    profile.course === 'D.Pharm' ? 'dpharm' :
+    'bpharm';
+
+  const stream = category.streams.find((item) => item.id === streamId) || category.streams[0];
+
+  return {
+    category: category.id,
+    categoryName: category.name,
+    stream: stream.id,
+    streamName: stream.name,
+    defaultPath: `/app/study/${category.id}/${stream.id}`,
+  };
+};
+
+export const getAcademicContext = (profile?: Partial<StudentProfile>) => {
+  const normalized = normalizeStudentProfile(profile);
+
+  if (normalized.category === 'diploma' || normalized.educationType === 'engineering') {
+    return resolveDiplomaStream(normalized);
+  }
+
+  if (normalized.category === 'pharmacy' || normalized.educationType === 'medical') {
+    return resolvePharmacyStream(normalized);
+  }
+
+  return resolveCbseStream(normalized);
 };
 
 export const getStudentRecommendations = (profile?: Partial<StudentProfile>) => {
@@ -124,18 +123,18 @@ export const getStudentRecommendations = (profile?: Partial<StudentProfile>) => 
     { title: 'Study Flow', progress: 54, path: '/app/study', icon: 'BookOpen', colorClass: 'text-[#14B8A6]', bgClass: 'bg-teal-50' },
   ];
 
-  if (ctx.category === 'school') {
+  if (ctx.category === 'cbse') {
     return [
-      { title: 'Board + Stream Prep', progress: 82, path: `/app/study/school/${ctx.stream}`, icon: 'BookOpen', colorClass: 'text-[#4F46E5]', bgClass: 'bg-indigo-50' },
-      { title: 'Concept Practice', progress: 70, path: `/app/study/school/${ctx.stream}/phy12`, icon: 'FlaskConical', colorClass: 'text-[#F52B91]', bgClass: 'bg-pink-50' },
+      { title: 'Board Prep', progress: 82, path: `/app/study/cbse/${ctx.stream}`, icon: 'BookOpen', colorClass: 'text-[#4F46E5]', bgClass: 'bg-indigo-50' },
+      { title: 'Concept Practice', progress: 70, path: `/app/study/cbse/${ctx.stream}/${ctx.stream.includes('pcb') ? 'bio-12-pcb' : 'maths-9'}`, icon: 'FlaskConical', colorClass: 'text-[#F52B91]', bgClass: 'bg-pink-50' },
       { title: 'Weekly Revision', progress: 64, path: '/app/progress', icon: 'BarChart2', colorClass: 'text-[#14B8A6]', bgClass: 'bg-teal-50' },
     ];
   }
 
-  if (ctx.category === 'medical') {
+  if (ctx.category === 'pharmacy') {
     return [
-      { title: 'Anatomy & Physiology', progress: 74, path: `/app/study/medical/${ctx.stream}/anatomy`, icon: 'Stethoscope', colorClass: 'text-[#F52B91]', bgClass: 'bg-rose-50' },
-      { title: 'Biology Revision', progress: 81, path: `/app/study/medical/${ctx.stream}/pharmacology`, icon: 'BookOpen', colorClass: 'text-[#4F46E5]', bgClass: 'bg-indigo-50' },
+      { title: 'Pharmaceutics', progress: 74, path: `/app/study/pharmacy/${ctx.stream}/pharmaceutics`, icon: 'Stethoscope', colorClass: 'text-[#F52B91]', bgClass: 'bg-rose-50' },
+      { title: 'Pharmacology', progress: 81, path: `/app/study/pharmacy/${ctx.stream}/pharmacology`, icon: 'BookOpen', colorClass: 'text-[#4F46E5]', bgClass: 'bg-indigo-50' },
       { title: 'Exam Readiness', progress: 69, path: '/app/progress', icon: 'BarChart2', colorClass: 'text-[#14B8A6]', bgClass: 'bg-teal-50' },
     ];
   }
