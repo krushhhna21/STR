@@ -1,13 +1,35 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
+import fs from 'fs';
+import ts from 'typescript';
+import os from 'os';
 
 // import studyCategories from frontend TS file via ts-node runtime
-const studyDataPath = path.resolve(__dirname, '../../frontend/src/data/studyData.ts');
+const studyDataPath = path.resolve(__dirname, '../../../frontend/src/data/studyData.ts');
 
 async function importStudyData() {
-  // dynamic import of TS file when run with ts-node
+  // read frontend TS and transpile to CommonJS, then require it
+  const src = fs.readFileSync(studyDataPath, 'utf8');
+  const transpiled = ts.transpileModule(src, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2019,
+      esModuleInterop: true,
+    },
+  }).outputText;
+
+  const tmpPath = path.join(os.tmpdir(), `studydata-${Date.now()}.js`);
+  fs.writeFileSync(tmpPath, transpiled, 'utf8');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { studyCategories } = require(studyDataPath) as any;
+  const studyModule = require(tmpPath) as any;
+  // cleanup
+  try {
+    fs.unlinkSync(tmpPath);
+  } catch (e) {
+    /* ignore */
+  }
+
+  const { studyCategories } = studyModule;
 
   const prisma = new PrismaClient();
 
