@@ -56,7 +56,7 @@ This guide provides step-by-step instructions for deploying both the **Backend**
    - `NODE_ENV`: `production`
    - `JWT_SECRET`: *(your secret string)*
    - `GOOGLE_CLIENT_ID`: *(your Google OAuth client ID)*
-   - `DATABASE_URL`: *(your Neon PostgreSQL connection string; use the direct/unpooled URL for migrations)*
+   - `DATABASE_URL`: *(your Neon PostgreSQL connection string)*
 5. Click **Create Web Service**. Copy your backend live URL (e.g. `https://studybuddy-backend.onrender.com`).
 
 > **Important:** If Render shows `Environment variable not found: DATABASE_URL`, open the backend service in Render, select **Environment**, add `DATABASE_URL`, paste the Neon connection string, save, and redeploy. Do not put the connection string in GitHub or `render.yaml`.
