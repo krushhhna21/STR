@@ -24,6 +24,7 @@ export const Home: React.FC = () => {
     categoryName: 'CBSE',
     educationType: 'school',
     branch: 'CSE',
+    board: 'CBSE',
     streamTag: 'PCM',
     classLevel: 'Class 12',
   };
@@ -90,7 +91,7 @@ export const Home: React.FC = () => {
               {profile.streamName}
             </h2>
             <p className="text-xs lg:text-sm text-indigo-200 font-medium mt-0.5">
-              {profile.educationType === 'school' ? `${profile.classLevel} • ${profile.board} • ${profile.streamTag}` : `${profile.yearGrade} • ${profile.branch || profile.streamTag || 'Academic Path'}`} • Personalized resources for your track
+              {profile.educationType === 'school' ? `${profile.classLevel} • ${profile.board || 'CBSE'} • ${profile.streamTag}` : `${profile.yearGrade} • ${profile.branch || profile.streamTag || 'Academic Path'}`} • Personalized resources for your track
             </p>
           </div>
 

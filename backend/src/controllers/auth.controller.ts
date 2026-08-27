@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getDb, saveDb } from '../utils/db';
+import { prisma } from '../utils/prisma';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
 
@@ -19,8 +19,7 @@ const normalizeUserForResponse = (user: any) => ({
 
 export const getMe = async (req: any, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const user = db.users.find((entry: any) => entry.id === req.user.id);
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
@@ -43,26 +42,23 @@ export const updateStudentProfile = async (req: any, res: Response): Promise<voi
       return;
     }
 
-    const db = getDb();
-    const userIndex = db.users.findIndex((entry: any) => entry.id === req.user.id);
-
-    if (userIndex === -1) {
+    const existingUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!existingUser) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    db.users[userIndex] = {
-      ...db.users[userIndex],
-      name: req.body.name || db.users[userIndex].name || req.user.name,
-      studentProfile,
-      updatedAt: new Date().toISOString(),
-    };
-
-    saveDb(db);
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        name: req.body.name || existingUser.name || req.user.name,
+        studentProfile,
+      },
+    });
 
     res.status(200).json({
       message: 'Student profile updated successfully',
-      user: normalizeUserForResponse(db.users[userIndex]),
+      user: normalizeUserForResponse(user),
     });
   } catch (error) {
     console.error('Update profile error:', error);
@@ -79,18 +75,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const db = getDb();
-    const existingUser = db.users.find((u: any) => u.email === email);
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       res.status(400).json({ error: 'User already exists with this email' });
       return;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const id = crypto.randomUUID();
-    const user = { id, name, email, passwordHash, role: 'STUDENT', studentProfile: null, createdAt: new Date().toISOString() };
-    db.users.push(user);
-    saveDb(db);
+    const user = await prisma.user.create({
+      data: { name, email, passwordHash, role: 'STUDENT' },
+    });
 
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -114,8 +108,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const db = getDb();
-    const user = db.users.find((u: any) => u.email === email);
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
       res.status(400).json({ error: 'Invalid credentials' });
@@ -163,16 +156,14 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
     const email = payload.email;
     const name = payload.name || 'Google User';
 
-    const db = getDb();
-    let user = db.users.find((u: any) => u.email === email);
+    let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
       const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
       const passwordHash = await bcrypt.hash(randomPassword, 10);
-      const id = crypto.randomUUID();
-      user = { id, name, email, passwordHash, role: 'STUDENT', studentProfile: null, createdAt: new Date().toISOString() };
-      db.users.push(user);
-      saveDb(db);
+      user = await prisma.user.create({
+        data: { name, email, passwordHash, role: 'STUDENT' },
+      });
     }
 
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });

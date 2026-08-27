@@ -4,8 +4,6 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import catalogRoutes from './routes/catalog.routes';
-import { initDb } from './utils/db';
-import { initContentDb } from './utils/contentDb';
 
 dotenv.config();
 
@@ -14,9 +12,6 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
-
-initDb();
-initContentDb();
 
 // Routes
 app.use('/api/auth', authRoutes);

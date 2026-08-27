@@ -18,6 +18,7 @@ model User {
   role         String   @default("student") // 'student' or 'admin'
   courseId     String?  
   institution  String?
+  studentProfile Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -78,4 +79,23 @@ model Material {
   chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ContentItem {
+  id         String   @id @default(uuid())
+  category   String
+  stream     String
+  year       String
+  subject    String
+  type       String
+  title      String
+  linkOrFile String
+  meta       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([category])
+  @@index([stream])
+  @@index([subject])
+  @@index([type])
 }

@@ -7,7 +7,7 @@ services:
     env: node
     plan: free
     rootDir: backend
-    buildCommand: npm install --include=dev && npm run build
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     startCommand: npm start
     envVars:
       - key: PORT
@@ -17,6 +17,8 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: DATABASE_URL
         sync: false
 
   # -------------------------------------------------------------

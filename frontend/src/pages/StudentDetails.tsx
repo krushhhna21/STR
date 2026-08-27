@@ -39,7 +39,7 @@ export const StudentDetails: React.FC = () => {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.studentProfile?.phone || '');
-  const [educationType, setEducationType] = useState<'school' | 'engineering' | 'medical' | 'other'>(user?.studentProfile?.educationType || 'school');
+  const [educationType, setEducationType] = useState<'school' | 'engineering' | 'diploma' | 'medical' | 'commerce' | 'other'>(user?.studentProfile?.educationType || 'school');
   const [selectedCategory, setSelectedCategory] = useState(user?.studentProfile?.category || 'cbse');
   const [selectedStream, setSelectedStream] = useState(user?.studentProfile?.stream || defaultStreamForCategory('cbse'));
   const [selectedYearGrade, setSelectedYearGrade] = useState(user?.studentProfile?.yearGrade || 'Class 9');
