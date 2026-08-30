@@ -35,7 +35,7 @@ This guide provides step-by-step instructions for deploying both the **Backend**
      - `GOOGLE_CLIENT_ID`: Input your Google OAuth Client ID.
        - `DATABASE_URL`: Add your Neon PostgreSQL connection string as a secret. This is required before the backend can build.
    - **`studybuddy-frontend`** (Static Site):
-     - `VITE_API_URL`: Set to your deployed backend service URL (e.g., `https://studybuddy-backend.onrender.com`).
+     - `VITE_API_URL`: Automatically linked to the `studybuddy-backend` live URL via `render.yaml`.
 6. Click **Apply**. Render will automatically build and deploy both services!
 
 ---

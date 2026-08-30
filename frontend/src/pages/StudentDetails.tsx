@@ -140,7 +140,7 @@ export const StudentDetails: React.FC = () => {
         setAuth(data.user, token);
       } else {
         const newUser = {
-          id: `user-${Date.now()}`,
+          id: `user-${crypto.randomUUID()}`,
           name,
           email,
           role: 'student',

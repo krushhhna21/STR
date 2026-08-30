@@ -38,10 +38,10 @@ export const ContentManager: React.FC = () => {
 
   useEffect(() => {
     const fallbackSubject = availableSubjects[0]?.id || '';
-    if (!availableSubjects.some((subject) => subject.id === selectedSubject)) {
+    if (fallbackSubject && !availableSubjects.some((subject) => subject.id === selectedSubject)) {
       setSelectedSubject(fallbackSubject);
     }
-  }, [availableSubjects, selectedSubject]);
+  }, [availableSubjects]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');

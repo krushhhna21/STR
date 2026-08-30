@@ -19,10 +19,6 @@ export const CategoryManager: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const token = useAuthStore((state) => state.token);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const fetchCategories = async () => {
     try {
       setErrorMsg('');
@@ -44,6 +40,10 @@ export const CategoryManager: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCategories();
+  }, [token]);
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();

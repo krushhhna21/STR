@@ -18,6 +18,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/catalog', catalogRoutes);
 
+app.get('/', (req, res) => {
+  res.json({ message: 'StudyBuddy API is running', health: '/health', status: 'ok' });
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
