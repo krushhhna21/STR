@@ -41,9 +41,9 @@ export const More: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      setAuth(data.user, data.token);
       toast.success(`Role updated to ${data.user.role}!`);
     } catch (err: any) {
+      alert(`Network Error: ${err.message || 'Failed to toggle role'}. Ensure adb reverse is running.`);
       toast.error(err.message || 'Failed to toggle role');
     } finally {
       setToggling(false);
@@ -69,11 +69,13 @@ export const More: React.FC = () => {
               <button 
                 onClick={handleToggleRole}
                 disabled={toggling}
-                className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-indigo-100 mb-3 hover:bg-white/20 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 bg-indigo-500/40 border border-indigo-300/50 px-4 py-2 rounded-full text-xs font-bold text-white mb-3 hover:bg-indigo-500/60 transition-all cursor-pointer shadow-lg animate-pulse"
               >
-                <Sparkles size={14} /> {isAdmin ? 'Admin Workspace' : 'Student Workspace'}
+                <Sparkles size={14} className={toggling ? "animate-spin" : ""} /> 
+                {isAdmin ? 'Admin Workspace' : 'Student Workspace'}
               </button>
-              <h1 className="text-2xl lg:text-4xl font-black tracking-tight">Everything in one place</h1>
+              <h1 className="text-2xl lg:text-4xl font-black tracking-tight mb-2">Everything in one place</h1>
+              <p className="text-indigo-200 font-medium">Logged in as: {user?.email}</p>
             </div>
             <div className="flex items-center gap-3 bg-white/10 px-4 py-3 rounded-2xl border border-white/10">
               <LaptopMinimal className="text-indigo-200" size={22} />
