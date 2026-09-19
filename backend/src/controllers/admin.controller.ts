@@ -16,7 +16,7 @@ export const getPublicCategories = async (_req: Request, res: Response) => {
     res.json(categories.map((category) => ({
       id: category.id, name: category.name, description: category.description || '', icon: category.icon || '',
       color: category.color || '', bg: category.bg || '',
-      streams: category.streams.map((stream) => ({ id: stream.id, name: stream.name, icon: stream.icon || '', subjects: [] })),
+      streams: category.streams.map((stream: any) => ({ id: stream.id, name: stream.name, icon: stream.icon || '', subjects: [] })),
     })));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 };

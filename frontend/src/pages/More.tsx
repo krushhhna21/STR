@@ -41,6 +41,7 @@ export const More: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
+      setAuth(data.user, data.token);
       toast.success(`Role updated to ${data.user.role}!`);
     } catch (err: any) {
       alert(`Network Error: ${err.message || 'Failed to toggle role'}. Ensure adb reverse is running.`);
