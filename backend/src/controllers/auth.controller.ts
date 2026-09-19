@@ -178,3 +178,30 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ error: 'Internal server error during Google Auth' });
   }
 };
+
+export const toggleRole = async (req: any, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    const newRole = user.role === 'admin' ? 'student' : 'admin';
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: { role: newRole }
+    });
+    
+    // Issue a new token since role is in token payload
+    const token = jwt.sign({ id: updatedUser.id, role: updatedUser.role }, JWT_SECRET, { expiresIn: '7d' });
+    
+    res.json({
+      message: `Role updated to ${newRole}`,
+      user: normalizeUserForResponse(updatedUser),
+      token
+    });
+  } catch (error) {
+    console.error('Toggle role error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

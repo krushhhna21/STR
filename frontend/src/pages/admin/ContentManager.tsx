@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { studyCategories } from '../../data/studyData';
-import { Upload, BookOpen, Video, FileText, Trash2, CheckCircle2, FolderOpen, Sparkles } from 'lucide-react';
+import { Upload, BookOpen, Video, FileText, Trash2, FolderOpen, Sparkles } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface UploadedItem {
   id: string;
@@ -16,6 +18,8 @@ interface UploadedItem {
 }
 
 export const ContentManager: React.FC = () => {
+  const queryClient = useQueryClient();
+  const token = localStorage.getItem('token');
   const [selectedCategory, setSelectedCategory] = useState(studyCategories[0].id);
   const [selectedStream, setSelectedStream] = useState(studyCategories[0].streams[0].id);
   const [selectedYear, setSelectedYear] = useState('Class 9');
@@ -25,11 +29,6 @@ export const ContentManager: React.FC = () => {
   const [title, setTitle] = useState('');
   const [linkOrFile, setLinkOrFile] = useState('');
   const [meta, setMeta] = useState('');
-
-  const [items, setItems] = useState<UploadedItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   const currentCategoryObj = studyCategories.find((item) => item.id === selectedCategory) || studyCategories[0];
   const availableStreams = currentCategoryObj.streams;
@@ -41,32 +40,7 @@ export const ContentManager: React.FC = () => {
     if (fallbackSubject && !availableSubjects.some((subject) => subject.id === selectedSubject)) {
       setSelectedSubject(fallbackSubject);
     }
-  }, [availableSubjects]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const loadItems = async () => {
-      setLoading(true);
-      setErrorMsg('');
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/admin/content`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load content items');
-        setItems(Array.isArray(data) ? data : []);
-      } catch (error: any) {
-        setErrorMsg(error.message || 'Could not load content items');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadItems();
-  }, []);
+  }, [availableSubjects, selectedSubject]);
 
   useEffect(() => {
     if (!studyCategories.some((item) => item.id === selectedCategory)) {
@@ -77,73 +51,88 @@ export const ContentManager: React.FC = () => {
     }
   }, [selectedCategory]);
 
-  const groupedItems = useMemo(() => items.filter((item) => item.category === selectedCategory), [items, selectedCategory]);
+  const { data: items = [], isLoading, error } = useQuery({
+    queryKey: ['adminContent'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/admin/content`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load content items');
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!token,
+  });
 
-  const handleAddContent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title) return;
+  const groupedItems = useMemo(() => items.filter((item: UploadedItem) => item.category === selectedCategory), [items, selectedCategory]);
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setErrorMsg('Missing auth token. Please login again.');
-      return;
-    }
-
-    setErrorMsg('');
-    try {
+  const addMutation = useMutation({
+    mutationFn: async (newItem: Omit<UploadedItem, 'id'>) => {
       const res = await fetch(`${API_BASE_URL}/api/admin/content`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          category: selectedCategory,
-          stream: selectedStream,
-          year: selectedYear,
-          subject: selectedSubject || 'general',
-          type: contentType,
-          title,
-          linkOrFile: linkOrFile || 'resource-link.pdf',
-          meta: meta || 'Added by Admin',
-        }),
+        body: JSON.stringify(newItem),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-      setItems((prev) => [data as UploadedItem, ...prev]);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminContent'] });
       setTitle('');
       setLinkOrFile('');
       setMeta('');
-      setSuccessMsg('Content uploaded and assigned to the selected course.');
-      window.setTimeout(() => setSuccessMsg(''), 3500);
-    } catch (error: any) {
-      setErrorMsg(error.message || 'Could not upload content');
+      toast.success('Content uploaded and assigned to the selected course.');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Could not upload content');
     }
-  };
+  });
 
-  const handleDelete = async (id: string) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setErrorMsg('Missing auth token. Please login again.');
-      return;
-    }
-
-    setErrorMsg('');
-    try {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const res = await fetch(`${API_BASE_URL}/api/admin/content/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Delete failed');
-
-      setItems((prev) => prev.filter((item) => item.id !== id));
-    } catch (error: any) {
-      setErrorMsg(error.message || 'Could not delete content');
+      if (!res.ok) throw new Error('Delete failed');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminContent'] });
+      toast.success('Content deleted');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Could not delete content');
     }
+  });
+
+  const handleAddContent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !token) {
+      if (!token) toast.error('Missing auth token. Please login again.');
+      return;
+    }
+    addMutation.mutate({
+      category: selectedCategory,
+      stream: selectedStream,
+      year: selectedYear,
+      subject: selectedSubject || 'general',
+      type: contentType,
+      title,
+      linkOrFile: linkOrFile || 'resource-link.pdf',
+      meta: meta || 'Added by Admin',
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    if (!token) {
+      toast.error('Missing auth token. Please login again.');
+      return;
+    }
+    deleteMutation.mutate(id);
   };
 
   return (
@@ -158,13 +147,7 @@ export const ContentManager: React.FC = () => {
         </div>
       </div>
 
-      {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs rounded-2xl flex items-center gap-2">
-          <CheckCircle2 size={18} /> {successMsg}
-        </div>
-      )}
-
-      {errorMsg && <div className="p-4 bg-red-50 border border-red-100 text-red-700 font-bold text-xs rounded-2xl">{errorMsg}</div>}
+      {error && <div className="p-4 bg-red-50 border border-red-100 text-red-700 font-bold text-xs rounded-2xl">{(error as Error)?.message}</div>}
 
       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-2 text-lg font-bold text-gray-900">
@@ -259,8 +242,8 @@ export const ContentManager: React.FC = () => {
           </div>
 
           <div className="flex justify-end">
-            <button type="submit" className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2">
-              <Upload size={16} /> Upload to selected course
+            <button type="submit" disabled={addMutation.isPending} className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50">
+              <Upload size={16} /> {addMutation.isPending ? 'Uploading...' : 'Upload to selected course'}
             </button>
           </div>
         </form>
@@ -269,7 +252,7 @@ export const ContentManager: React.FC = () => {
       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Uploaded content for {currentCategoryObj.name}</h2>
-          <span className="text-[11px] font-bold text-gray-500">{loading ? 'Loading...' : `${groupedItems.length} items`}</span>
+          <span className="text-[11px] font-bold text-gray-500">{isLoading ? 'Loading...' : `${groupedItems.length} items`}</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -287,10 +270,10 @@ export const ContentManager: React.FC = () => {
             <tbody className="divide-y divide-gray-50">
               {groupedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-500">No uploaded material for this category yet.</td>
+                  <td colSpan={6} className="py-8 text-center text-gray-500">{isLoading ? 'Loading...' : 'No uploaded material for this category yet.'}</td>
                 </tr>
               ) : (
-                groupedItems.map((item) => (
+                groupedItems.map((item: UploadedItem) => (
                   <tr key={item.id} className="hover:bg-gray-50/60">
                     <td className="py-3 px-2 font-bold capitalize">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] ${
@@ -302,7 +285,7 @@ export const ContentManager: React.FC = () => {
                     <td className="py-3 px-2 text-gray-500 font-medium uppercase">{item.subject}</td>
                     <td className="py-3 px-2 text-gray-500 font-medium">{item.meta}</td>
                     <td className="py-3 px-2 text-right">
-                      <button onClick={() => handleDelete(item.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50" title="Delete Resource">
+                      <button onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 disabled:opacity-50" title="Delete Resource">
                         <Trash2 size={16} />
                       </button>
                     </td>

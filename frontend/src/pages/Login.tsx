@@ -13,6 +13,13 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const user = useAuthStore((state) => state.user);
+
+  React.useEffect(() => {
+    if (user) {
+      navigate(user.studentProfile ? '/app' : '/onboarding/student-details', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +47,7 @@ export const Login: React.FC = () => {
     }
   };
 
-  const loginWithGoogle = useGoogleLogin({
+  const loginWithGoogleWeb = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
@@ -63,6 +70,42 @@ export const Login: React.FC = () => {
       }
     },
   });
+
+  const handleGoogleLogin = async () => {
+    import('@capacitor/core').then(async ({ Capacitor }) => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+          setLoading(true);
+          GoogleAuth.initialize({
+            clientId: '84101386844-13n5f21bdbkprti941bgtbgtq680t406.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: true,
+          });
+          const response = await GoogleAuth.signIn();
+          // Send native token to backend
+          const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_token: response.authentication.accessToken }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Native Google login failed');
+  
+          const { token, user } = data;
+          setAuth(user, token);
+          const from = location.state?.from?.pathname || (user.studentProfile ? '/app' : '/onboarding/student-details');
+          navigate(from, { replace: true });
+        } catch (err: any) {
+          setError(err.message || 'Native Google login failed');
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        loginWithGoogleWeb();
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-white lg:bg-[#F9F7FF] flex flex-col lg:flex-row items-center justify-center p-6 lg:p-12 gap-12">
@@ -143,7 +186,7 @@ export const Login: React.FC = () => {
         </div>
 
         <button
-          onClick={() => loginWithGoogle()}
+          onClick={handleGoogleLogin}
           type="button"
           className="w-full py-4 rounded-2xl bg-white border border-gray-100 text-gray-700 font-bold text-base shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 mb-8"
         >

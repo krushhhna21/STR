@@ -21,6 +21,33 @@ export const getPublicCategories = async (_req: Request, res: Response) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 };
 
+export const getPublicContent = async (req: Request, res: Response) => {
+  try {
+    const { category, stream, subject, q } = req.query;
+    
+    // Build where clause
+    const where: any = {};
+    if (category) where.category = String(category);
+    if (stream) where.stream = String(stream);
+    if (subject) where.subject = String(subject);
+    
+    // Add text search if provided
+    if (q) {
+      where.OR = [
+        { title: { contains: String(q), mode: 'insensitive' } },
+        { subject: { contains: String(q), mode: 'insensitive' } },
+        { type: { contains: String(q), mode: 'insensitive' } }
+      ];
+    }
+
+    const items = await prisma.contentItem.findMany({ 
+      where,
+      orderBy: { createdAt: 'desc' } 
+    });
+    res.json(items);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+};
+
 export const createCategory = async (req: Request, res: Response) => {
   try {
     const { name, description, icon, color, bg } = req.body;

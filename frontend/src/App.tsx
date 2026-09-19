@@ -21,9 +21,16 @@ import { AdminLayout } from './pages/admin/AdminLayout';
 import { CategoryManager } from './pages/admin/CategoryManager';
 import { ContentManager } from './pages/admin/ContentManager';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
+
+const queryClient = new QueryClient();
+
 function App() {
   return (
-    <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <Toaster position="top-center" richColors />
+      <BrowserRouter>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
@@ -84,6 +91,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

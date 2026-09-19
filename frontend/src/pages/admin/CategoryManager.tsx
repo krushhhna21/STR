@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth';
 import { API_BASE_URL } from '../../config/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface Category {
   id: string;
@@ -10,93 +12,84 @@ interface Category {
 }
 
 export const CategoryManager: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDescription, setNewCategoryDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const token = useAuthStore((state) => state.token);
 
-  const fetchCategories = async () => {
-    try {
-      setErrorMsg('');
-      const authToken = token || localStorage.getItem('token');
+  const { data: categories = [], isLoading, error } = useQuery({
+    queryKey: ['adminCategories'],
+    queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/admin/categories`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to fetch categories');
       }
+      return res.json() as Promise<Category[]>;
+    },
+    enabled: !!token
+  });
 
-      const data = await res.json();
-      setCategories(data);
-    } catch (err) {
-      console.error('Failed to fetch categories', err);
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to fetch categories');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, [token]);
-
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) {
-      setErrorMsg('Category name is required');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setErrorMsg('');
-      const authToken = token || localStorage.getItem('token');
+  const addMutation = useMutation({
+    mutationFn: async (newCategory: { name: string; description: string }) => {
       const res = await fetch(`${API_BASE_URL}/api/admin/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: newCategoryName.trim(),
-          description: newCategoryDescription.trim(),
-        }),
+        body: JSON.stringify(newCategory),
       });
-
-      const data = await res.json();
       if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || 'Failed to create category');
       }
-
-      setCategories((prev) => [...prev, data]);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
       setNewCategoryName('');
       setNewCategoryDescription('');
       setShowAddModal(false);
-    } catch (err) {
-      console.error('Failed to create category', err);
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to create category');
-    } finally {
-      setSubmitting(false);
+      toast.success('Category created successfully');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to create category');
     }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/api/admin/categories/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Delete failed');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
+      toast.success('Category deleted');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to delete category');
+    }
+  });
+
+  const handleAddCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+    addMutation.mutate({ name: newCategoryName.trim(), description: newCategoryDescription.trim() });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
-    try {
-      const authToken = token || localStorage.getItem('token');
-      await fetch(`${API_BASE_URL}/api/admin/categories/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      setCategories(categories.filter(c => c.id !== id));
-    } catch (err) {
-      console.error(err);
-    }
+    deleteMutation.mutate(id);
   };
 
   return (
@@ -108,7 +101,6 @@ export const CategoryManager: React.FC = () => {
         </div>
         <button
           onClick={() => {
-            setErrorMsg('');
             setShowAddModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
@@ -118,9 +110,9 @@ export const CategoryManager: React.FC = () => {
         </button>
       </div>
 
-      {errorMsg && (
+      {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          {errorMsg}
+          {(error as Error)?.message}
         </div>
       )}
 
@@ -157,16 +149,16 @@ export const CategoryManager: React.FC = () => {
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  disabled={submitting}
+                  disabled={addMutation.isPending}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-                  disabled={submitting}
+                  disabled={addMutation.isPending}
                 >
-                  {submitting ? 'Adding...' : 'Add Category'}
+                  {addMutation.isPending ? 'Adding...' : 'Add Category'}
                 </button>
               </div>
             </form>
@@ -184,7 +176,7 @@ export const CategoryManager: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {loading ? (
+            {isLoading ? (
               <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">Loading categories...</td></tr>
             ) : categories.length === 0 ? (
               <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">No categories found.</td></tr>
@@ -197,7 +189,7 @@ export const CategoryManager: React.FC = () => {
                     <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors mr-2">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => handleDelete(c.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => handleDelete(c.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" disabled={deleteMutation.isPending}>
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -210,3 +202,4 @@ export const CategoryManager: React.FC = () => {
     </div>
   );
 };
+

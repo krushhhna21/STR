@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/auth';
 import { studyCategories } from '../data/studyData';
 import { TopBar } from '../components/layout/TopBar';
 import { BookOpen, Video, FileText, Download, Play, GraduationCap, Edit3, Search, Sparkles } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { API_BASE_URL } from '../config/api';
 
 export const MyCourseResources: React.FC = () => {
   const navigate = useNavigate();
@@ -24,34 +26,29 @@ export const MyCourseResources: React.FC = () => {
   const streamObj = categoryObj.streams.find(s => s.id === profile.stream) || categoryObj.streams[0];
   const subjects = streamObj ? streamObj.subjects : [];
 
-  // Extract Books, Videos, and Notes Resources from the active enrolled stream & subjects
-  const allBooks = [
-    { id: 'b1', title: 'Database System Concepts (Silberschatz)', subject: 'DBMS', format: 'PDF', pages: 450, author: 'Silberschatz & Korth' },
-    { id: 'b2', title: 'Introduction to Algorithms (CLRS)', subject: 'DSA', format: 'PDF', pages: 1200, author: 'Cormen, Leiserson, Rivest' },
-    { id: 'b3', title: 'Operating System Concepts (Galvin)', subject: 'OS', format: 'PDF', pages: 800, author: 'Silberschatz, Galvin' },
-    { id: 'b4', title: 'Computer Networking: A Top-Down Approach', subject: 'CN', format: 'PDF', pages: 750, author: 'Kurose & Ross' },
-    { id: 'b5', title: 'NCERT Class 12 Physics & Chemistry Complete Set', subject: 'Science', format: 'PDF', pages: 520, author: 'NCERT Board' },
-  ];
+  // Fetch real content from the backend instead of hardcoded arrays
+  const { data: dbContent = [] } = useQuery({
+    queryKey: ['content', profile.stream, profile.category],
+    queryFn: async () => {
+      // Build query string based on user's enrolled stream
+      const params = new URLSearchParams();
+      if (profile.stream) params.append('stream', profile.stream);
+      else if (profile.category) params.append('category', profile.category);
+      
+      const res = await fetch(`${API_BASE_URL}/api/catalog/content?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch content');
+      return res.json();
+    }
+  });
 
-  const allVideos = [
-    { id: 'v1', title: 'Mastering SQL Queries, Joins & Subqueries', subject: 'DBMS', duration: '28 min', instructor: 'Prof. Turing' },
-    { id: 'v2', title: '1NF, 2NF, 3NF & BCNF Normalization Step-by-Step', subject: 'DBMS', duration: '22 min', instructor: 'Prof. Turing' },
-    { id: 'v3', title: 'Dynamic Programming & Graph Traversal (BFS/DFS)', subject: 'DSA', duration: '35 min', instructor: 'Dr. Knuth' },
-    { id: 'v4', title: 'Process CPU Scheduling (FCFS, Round Robin, SJF)', subject: 'OS', duration: '20 min', instructor: 'Prof. Tanenbaum' },
-    { id: 'v5', title: '7 Layers of OSI Model & TCP/IP Packet Architecture', subject: 'CN', duration: '25 min', instructor: 'Dr. Cerf' },
-  ];
+  // Categorize fetched content
+  const allBooks = dbContent.filter((item: any) => item.type === 'book');
+  const allVideos = dbContent.filter((item: any) => item.type === 'video');
+  const allResources = dbContent.filter((item: any) => !['book', 'video'].includes(item.type));
 
-  const allResources = [
-    { id: 'r1', title: 'Chapter 1-4 Complete DBMS Lecture Notes PDF', type: 'Lecture Notes', size: '4.2 MB', updated: '2 days ago' },
-    { id: 'r2', title: 'Top 50 Data Structures Interview Questions & Solutions', type: 'Question Bank', size: '2.8 MB', updated: 'Yesterday' },
-    { id: 'r3', title: 'Operating Systems Lab Manual & C Code Sheets', type: 'Lab Manual', size: '5.1 MB', updated: '3 days ago' },
-    { id: 'r4', title: 'Computer Networks Formula Cheat Sheet & Subnetting Guide', type: 'Formula Sheet', size: '1.5 MB', updated: '4 days ago' },
-    { id: 'r5', title: 'Previous 5 Years Solved End-Sem Exam Papers', type: 'Past Papers', size: '8.4 MB', updated: '1 week ago' },
-  ];
-
-  const filteredBooks = allBooks.filter(b => b.title.toLowerCase().includes(searchQuery.toLowerCase()) || b.subject.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredVideos = allVideos.filter(v => v.title.toLowerCase().includes(searchQuery.toLowerCase()) || v.subject.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredResources = allResources.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.type.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredBooks = allBooks.filter((b: any) => b.title.toLowerCase().includes(searchQuery.toLowerCase()) || b.subject.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredVideos = allVideos.filter((v: any) => v.title.toLowerCase().includes(searchQuery.toLowerCase()) || v.subject.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredResources = allResources.filter((r: any) => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.type.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-full">
@@ -146,24 +143,25 @@ export const MyCourseResources: React.FC = () => {
           {/* TAB CONTENT 1: BOOKS */}
           {activeTab === 'books' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-              {filteredBooks.map((book) => (
+              {filteredBooks.length === 0 && <p className="text-gray-500 text-sm col-span-full text-center py-8">No books available yet.</p>}
+              {filteredBooks.map((book: any) => (
                 <div key={book.id} className="p-5 bg-gray-50/70 border border-gray-100 rounded-2xl flex flex-col justify-between hover:shadow-md hover:border-indigo-100 transition-all">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] font-bold text-indigo-600 bg-indigo-100/60 px-2.5 py-0.5 rounded-md">
                         {book.subject}
                       </span>
-                      <span className="text-[11px] font-bold text-gray-400">{book.pages} Pages</span>
+                      <span className="text-[11px] font-bold text-gray-400">PDF</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-sm mb-1 leading-snug">{book.title}</h3>
-                    <p className="text-xs text-gray-500 font-medium">Author: {book.author}</p>
+                    <p className="text-xs text-gray-500 font-medium">{book.meta || 'Study Material'}</p>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-gray-200/50 flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-500">{book.format} Book</span>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6C3BC7] text-white text-xs font-bold rounded-lg hover:bg-[#582cb5] transition-colors shadow-sm">
-                      <Download size={14} /> Download PDF
-                    </button>
+                    <span className="text-xs font-bold text-gray-500">Book</span>
+                    <a href={book.linkOrFile || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6C3BC7] text-white text-xs font-bold rounded-lg hover:bg-[#582cb5] transition-colors shadow-sm">
+                      <Download size={14} /> Open
+                    </a>
                   </div>
                 </div>
               ))}
@@ -173,24 +171,25 @@ export const MyCourseResources: React.FC = () => {
           {/* TAB CONTENT 2: VIDEO LECTURES */}
           {activeTab === 'videos' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-              {filteredVideos.map((vid) => (
+              {filteredVideos.length === 0 && <p className="text-gray-500 text-sm col-span-full text-center py-8">No videos available yet.</p>}
+              {filteredVideos.map((vid: any) => (
                 <div key={vid.id} className="p-5 bg-gray-50/70 border border-gray-100 rounded-2xl flex flex-col justify-between hover:shadow-md hover:border-rose-100 transition-all">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] font-bold text-rose-600 bg-rose-100/60 px-2.5 py-0.5 rounded-md">
                         {vid.subject}
                       </span>
-                      <span className="text-[11px] font-bold text-gray-400">{vid.duration}</span>
+                      <span className="text-[11px] font-bold text-gray-400">Video</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-sm mb-1 leading-snug">{vid.title}</h3>
-                    <p className="text-xs text-gray-500 font-medium">Instructor: {vid.instructor}</p>
+                    <p className="text-xs text-gray-500 font-medium">{vid.meta || 'Lecture'}</p>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-gray-200/50 flex items-center justify-between">
                     <span className="text-xs font-bold text-rose-600">Video Lesson</span>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors shadow-sm">
-                      <Play size={14} /> Watch Lecture
-                    </button>
+                    <a href={vid.linkOrFile || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors shadow-sm">
+                      <Play size={14} /> Watch
+                    </a>
                   </div>
                 </div>
               ))}
@@ -200,24 +199,25 @@ export const MyCourseResources: React.FC = () => {
           {/* TAB CONTENT 3: STUDY RESOURCES */}
           {activeTab === 'resources' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-              {filteredResources.map((res) => (
+              {filteredResources.length === 0 && <p className="text-gray-500 text-sm col-span-full text-center py-8">No resources available yet.</p>}
+              {filteredResources.map((res: any) => (
                 <div key={res.id} className="p-5 bg-gray-50/70 border border-gray-100 rounded-2xl flex flex-col justify-between hover:shadow-md hover:border-emerald-100 transition-all">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-md">
                         {res.type}
                       </span>
-                      <span className="text-[11px] font-bold text-gray-400">{res.size}</span>
+                      <span className="text-[11px] font-bold text-gray-400">Resource</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-sm mb-1 leading-snug">{res.title}</h3>
-                    <p className="text-xs text-gray-500 font-medium">Updated: {res.updated}</p>
+                    <p className="text-xs text-gray-500 font-medium">{res.meta || 'Notes'}</p>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-gray-200/50 flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-600">Study Resource</span>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
-                      <Download size={14} /> Open File
-                    </button>
+                    <a href={res.linkOrFile || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                      <Download size={14} /> Open
+                    </a>
                   </div>
                 </div>
               ))}

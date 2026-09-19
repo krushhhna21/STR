@@ -1,11 +1,13 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { 
   BookOpen, Brain, Clock, TreePine, BarChart3, 
   Map, Smile, ChevronRight, GraduationCap
-} from 'lucide-react'
+} from 'lucide-react';
+import { useAuthStore } from '../store/auth';
 
 
 // Animation Variants
@@ -29,8 +31,15 @@ const popIn: any = {
 
 export function Landing() {
   const navigate = useNavigate()
+  const user = useAuthStore(state => state.user)
   const { scrollYProgress } = useScroll()
   const yPos = useTransform(scrollYProgress, [0, 1], [0, -150])
+
+  useEffect(() => {
+    if (user) {
+      navigate('/app');
+    }
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F1FF] via-[#F4E8FF] to-[#EAE0FF] relative overflow-hidden font-sans">

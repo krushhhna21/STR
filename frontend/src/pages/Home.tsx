@@ -19,6 +19,7 @@ export const Home: React.FC = () => {
   const { todayFocusSeconds, tasks, toggleTask, resetStats } = useTimerStore();
 
   const profile = user?.studentProfile || {
+    stream: 'class12-pcm',
     streamName: 'Class 12th PCM',
     yearGrade: 'Class 12',
     categoryName: 'CBSE',
@@ -177,39 +178,34 @@ export const Home: React.FC = () => {
         </div>
 
         {/* Continue Studying Section with Real Subjects */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[16px] lg:text-[18px] font-bold text-[#1E1B4B]">Continue Active Streams & Subjects</h3>
-            <button onClick={() => navigate('/app/study')} className="text-xs font-bold text-[#F52B91] hover:underline">
-              View All Courses
-            </button>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {recommendationCards.map((item, index) => {
-              const iconMap: Record<string, any> = {
-                BookOpen,
-                Calculator,
-                FlaskConical,
-                Code2,
-                BookText,
-                Stethoscope,
-              };
-              const Icon = iconMap[item.title.includes('Physics') ? 'FlaskConical' : item.title.includes('Anatomy') ? 'Stethoscope' : item.title.includes('Progress') ? 'BarChart2' : 'BookOpen'];
+        {(profile as any).stream && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[16px] lg:text-[18px] font-bold text-[#1E1B4B]">Continue Active Streams & Subjects</h3>
+              <button onClick={() => navigate('/app/study')} className="text-xs font-bold text-[#F52B91] hover:underline">
+                View All Courses
+              </button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {recommendationCards.map((item, index) => {
+                const iconMap: Record<string, any> = { BookOpen, Calculator, FlaskConical, Code2, BookText, Stethoscope, };
+                const Icon = iconMap[item.title.includes('Physics') ? 'FlaskConical' : item.title.includes('Anatomy') ? 'Stethoscope' : item.title.includes('Progress') ? 'BarChart2' : 'BookOpen'];
 
-              return (
-                <div key={`${item.title}-${index}`} onClick={() => navigate(item.path)} className="cursor-pointer">
-                  <CourseCard 
-                    title={item.title}
-                    progress={item.progress}
-                    icon={Icon}
-                    colorClass={item.colorClass}
-                    bgClass={item.bgClass}
-                  />
-                </div>
-              );
-            })}
+                return (
+                  <div key={`${item.title}-${index}`} onClick={() => navigate(item.path)} className="cursor-pointer">
+                    <CourseCard 
+                      title={item.title}
+                      progress={item.progress}
+                      icon={Icon}
+                      colorClass={item.colorClass}
+                      bgClass={item.bgClass}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Today's Tasks */}
         <div className="pb-8">

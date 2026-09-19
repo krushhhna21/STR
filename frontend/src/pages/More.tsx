@@ -1,21 +1,61 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TopBar } from '../components/layout/TopBar';
 import { Button } from '../components/ui/Button';
 import {
   Settings, Shield, Bell, HelpCircle, Sparkles, ChevronRight,
-  BookOpenCheck, CircleUserRound, LaptopMinimal
+  BookOpenCheck, CircleUserRound, LaptopMinimal, LayoutDashboard, LogOut
 } from 'lucide-react';
+import { useAuthStore } from '../store/auth';
+import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
+import { toast } from 'sonner';
 
 const actions = [
-  { title: 'Account Settings', subtitle: 'Manage profile, preferences, and security', icon: Settings },
-  { title: 'Study Preferences', subtitle: 'Tune reminders and focus sessions', icon: BookOpenCheck },
-  { title: 'Notifications', subtitle: 'Control alerts and important updates', icon: Bell },
-  { title: 'Support & Help', subtitle: 'Find answers and contact support', icon: HelpCircle },
-  { title: 'Privacy', subtitle: 'Review data and account visibility', icon: Shield },
-  { title: 'Personal Profile', subtitle: 'Edit student details and academic setup', icon: CircleUserRound },
+  { title: 'Account Settings', subtitle: 'Manage profile, preferences, and security', icon: Settings, route: '/onboarding/student-details' },
+  { title: 'Study Preferences', subtitle: 'Tune reminders and focus sessions', icon: BookOpenCheck, route: '/onboarding/student-details' },
+  { title: 'Notifications', subtitle: 'Control alerts and important updates', icon: Bell, route: '#' },
+  { title: 'Support & Help', subtitle: 'Find answers and contact support', icon: HelpCircle, route: '#' },
+  { title: 'Privacy', subtitle: 'Review data and account visibility', icon: Shield, route: '#' },
+  { title: 'Personal Profile', subtitle: 'Edit student details and academic setup', icon: CircleUserRound, route: '/onboarding/student-details' },
 ];
 
 export const More: React.FC = () => {
+  const user = useAuthStore(state => state.user);
+  const token = useAuthStore(state => state.token);
+  const logout = useAuthStore(state => state.logout);
+  const setAuth = useAuthStore(state => state.setAuth);
+  const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin';
+  const [toggling, setToggling] = useState(false);
+
+  const handleToggleRole = async () => {
+    if (!token) return;
+    try {
+      setToggling(true);
+      const res = await fetch(`${API_BASE_URL}/api/auth/toggle-role`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setAuth(data.user, data.token);
+      toast.success(`Role updated to ${data.user.role}!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to toggle role');
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    logout();
+    navigate('/login', { replace: true });
+    toast.success('Signed out successfully');
+  };
+
   return (
     <div className="min-h-full bg-[#F9F7FF]">
       <div className="lg:hidden">
@@ -26,9 +66,13 @@ export const More: React.FC = () => {
         <div className="rounded-[28px] bg-gradient-to-r from-[#1E1B4B] via-indigo-900 to-[#6C3BC7] p-6 lg:p-8 text-white shadow-lg">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-indigo-100 mb-3">
-                <Sparkles size={14} /> Student Workspace
-              </div>
+              <button 
+                onClick={handleToggleRole}
+                disabled={toggling}
+                className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-indigo-100 mb-3 hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                <Sparkles size={14} /> {isAdmin ? 'Admin Workspace' : 'Student Workspace'}
+              </button>
               <h1 className="text-2xl lg:text-4xl font-black tracking-tight">Everything in one place</h1>
             </div>
             <div className="flex items-center gap-3 bg-white/10 px-4 py-3 rounded-2xl border border-white/10">
@@ -39,9 +83,26 @@ export const More: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {actions.map(({ title, subtitle, icon: Icon }) => (
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="group text-left rounded-[24px] border-2 border-indigo-200 bg-indigo-50 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center">
+                  <LayoutDashboard size={20} />
+                </div>
+                <ChevronRight className="text-indigo-300 group-hover:text-indigo-500 transition-colors" size={18} />
+              </div>
+              <h3 className="text-base font-black text-indigo-900">Admin Portal</h3>
+              <p className="mt-2 text-sm text-indigo-700 font-medium">Manage categories, content, and system settings</p>
+            </button>
+          )}
+          
+          {actions.map(({ title, subtitle, icon: Icon, route }) => (
             <button
               key={title}
+              onClick={() => route !== '#' ? navigate(route) : toast.info(`${title} is coming soon!`)}
               className="group text-left rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               <div className="flex items-center justify-between mb-4">
@@ -66,6 +127,16 @@ export const More: React.FC = () => {
               Upgrade to Pro
             </Button>
           </div>
+        </div>
+
+        {/* Sign Out Button */}
+        <div className="pt-4 pb-8 flex justify-center">
+          <button 
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-6 py-3 bg-rose-50 text-rose-600 font-bold rounded-2xl hover:bg-rose-100 transition-colors"
+          >
+            <LogOut size={18} /> Sign Out of Study Buddy
+          </button>
         </div>
       </div>
     </div>

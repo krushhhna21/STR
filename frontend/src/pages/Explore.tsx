@@ -1,27 +1,61 @@
 import React, { useState } from 'react';
 import { TopBar } from '../components/layout/TopBar';
 import { ResourceCard } from '../components/ui/ResourceCard';
-import { Search, Flame, Sparkles, Calculator, FlaskConical, Code2, Stethoscope, Briefcase } from 'lucide-react';
+import { Search, Flame, Sparkles, BookOpen, Video, FileText } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { API_BASE_URL } from '../config/api';
 
-const categories = ['All', 'Computer Science', 'Class 12 JEE/NEET', 'Medical', 'Commerce', 'Web Dev & AI'];
+const getTypeIcon = (type: string) => {
+  if (type === 'video') return Video;
+  if (type === 'resource' || type === 'document') return FileText;
+  return BookOpen;
+};
 
-const recommendedResources = [
-  { id: 1, title: 'Database Normalization & 3NF/BCNF', topic: 'Computer Science', type: 'video' as const, color: 'bg-indigo-500', icon: Code2, path: '/app/study/engineering/cse/dbms' },
-  { id: 2, title: 'Electrostatics & Gauss Law Notes', topic: 'Class 12 JEE/NEET', type: 'document' as const, color: 'bg-rose-500', icon: FlaskConical, path: '/app/study/school/class12-jee/phy12' },
-  { id: 3, title: 'Human Anatomy 3D Heart Model', topic: 'Medical', type: 'video' as const, color: 'bg-red-500', icon: Stethoscope, path: '/app/study/medical/mbbs-phase1/anatomy' },
-  { id: 4, title: 'React Hooks & State Management Guide', topic: 'Web Dev & AI', type: 'video' as const, color: 'bg-teal-500', icon: Sparkles, path: '/app/study/skills/web-dev/react-node' },
-  { id: 5, title: 'Calculus Definite Integrals Booklet', topic: 'Class 12 JEE/NEET', type: 'document' as const, color: 'bg-blue-500', icon: Calculator, path: '/app/study/school/class12-jee/math12' },
-  { id: 6, title: 'Corporate Financial Accounting', topic: 'Commerce', type: 'document' as const, color: 'bg-amber-500', icon: Briefcase, path: '/app/study/commerce/finance-bba/fin-acc' },
-];
+const getTypeColor = (type: string) => {
+  if (type === 'video') return 'bg-rose-500';
+  if (type === 'resource' || type === 'document') return 'bg-emerald-500';
+  return 'bg-indigo-500';
+};
 
 export const Explore: React.FC = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredResources = recommendedResources.filter(res => {
+  const { data: categoriesData = [] } = useQuery({
+    queryKey: ['publicCategories'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/catalog/categories`);
+      if (!res.ok) throw new Error('Failed to fetch categories');
+      return res.json();
+    }
+  });
+
+  const { data: contentData = [], isLoading } = useQuery({
+    queryKey: ['publicContent'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/catalog/content`);
+      if (!res.ok) throw new Error('Failed to fetch content');
+      return res.json();
+    }
+  });
+
+  const categoryNames = ['All', ...categoriesData.map((c: any) => c.name)];
+
+  const mappedResources = contentData.map((item: any) => ({
+    id: item.id,
+    title: item.title,
+    topic: categoriesData.find((c: any) => c.id === item.category)?.name || item.subject || 'General',
+    type: item.type === 'resource' ? 'document' : item.type,
+    color: getTypeColor(item.type),
+    icon: getTypeIcon(item.type),
+    path: item.linkOrFile.startsWith('http') ? item.linkOrFile : `/app/study/${item.id}`,
+    isExternal: item.linkOrFile.startsWith('http')
+  }));
+
+  const filteredResources = mappedResources.filter((res: any) => {
     const matchesCategory = activeCategory === 'All' || res.topic === activeCategory;
     const matchesQuery = res.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          res.topic.toLowerCase().includes(searchQuery.toLowerCase());
@@ -49,7 +83,7 @@ export const Explore: React.FC = () => {
 
         {/* Categories Pills */}
         <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-          {categories.map((category) => (
+          {categoryNames.map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
@@ -75,19 +109,25 @@ export const Explore: React.FC = () => {
             <span className="text-xs font-bold text-gray-400">{filteredResources.length} items found</span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredResources.map((res) => (
-              <div key={res.id} onClick={() => navigate(res.path)} className="cursor-pointer">
-                <ResourceCard
-                  title={res.title}
-                  topic={res.topic}
-                  type={res.type}
-                  color={res.color}
-                  icon={res.icon}
-                />
-              </div>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="text-center py-12 text-gray-500 font-medium">Loading amazing resources...</div>
+          ) : filteredResources.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 font-medium">No resources found.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredResources.map((res: any) => (
+                <div key={res.id} onClick={() => res.isExternal ? window.open(res.path, '_blank') : navigate(res.path)} className="cursor-pointer">
+                  <ResourceCard
+                    title={res.title}
+                    topic={res.topic}
+                    type={res.type}
+                    color={res.color}
+                    icon={res.icon}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* AI Tutors Section */}
