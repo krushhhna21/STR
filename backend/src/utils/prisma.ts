@@ -1,6 +1,9 @@
-import { Pool } from '@neondatabase/serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import ws from 'ws';
+
+neonConfig.webSocketConstructor = ws;
 
 dotenv.config();
 

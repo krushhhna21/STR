@@ -166,38 +166,40 @@ export const CategoryManager: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
-            <tr>
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Description</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {isLoading ? (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">Loading categories...</td></tr>
-            ) : categories.length === 0 ? (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">No categories found.</td></tr>
-            ) : (
-              categories.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
-                  <td className="px-6 py-4 text-gray-500">{c.description || '-'}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors mr-2">
-                      <Edit2 size={16} />
-                    </button>
-                    <button onClick={() => handleDelete(c.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" disabled={deleteMutation.isPending}>
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[500px]">
+            <thead className="bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
+              <tr>
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">Description</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">Loading categories...</td></tr>
+              ) : categories.length === 0 ? (
+                <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">No categories found.</td></tr>
+              ) : (
+                categories.map(c => (
+                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
+                    <td className="px-6 py-4 text-gray-500">{c.description || '-'}</td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors mr-2">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(c.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" disabled={deleteMutation.isPending}>
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

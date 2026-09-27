@@ -188,7 +188,7 @@ export const Home: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {recommendationCards.map((item, index) => {
-                const iconMap: Record<string, any> = { BookOpen, Calculator, FlaskConical, Code2, BookText, Stethoscope, };
+                const iconMap: Record<string, any> = { BookOpen, Calculator, FlaskConical, Code2, BookText, Stethoscope, BarChart2 };
                 const Icon = iconMap[item.title.includes('Physics') ? 'FlaskConical' : item.title.includes('Anatomy') ? 'Stethoscope' : item.title.includes('Progress') ? 'BarChart2' : 'BookOpen'];
 
                 return (
