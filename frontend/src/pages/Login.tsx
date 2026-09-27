@@ -21,6 +21,19 @@ export const Login: React.FC = () => {
     }
   }, [user, navigate]);
 
+  React.useEffect(() => {
+    import('@capacitor/core').then(async ({ Capacitor }) => {
+      if (Capacitor.isNativePlatform()) {
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        GoogleAuth.initialize({
+          clientId: '84101386844-13n5f21bdbkprti941bgtbgtq680t406.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true,
+        });
+      }
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -77,11 +90,6 @@ export const Login: React.FC = () => {
         try {
           const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
           setLoading(true);
-          GoogleAuth.initialize({
-            clientId: '84101386844-13n5f21bdbkprti941bgtbgtq680t406.apps.googleusercontent.com',
-            scopes: ['profile', 'email'],
-            grantOfflineAccess: true,
-          });
           const response = await GoogleAuth.signIn();
           // Send native token to backend
           const res = await fetch(`${API_BASE_URL}/api/auth/google`, {

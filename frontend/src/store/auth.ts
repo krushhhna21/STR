@@ -64,6 +64,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     return { user: updatedUser };
   }),
   logout: () => {
+    import('@capacitor/core').then(async ({ Capacitor }) => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+          await GoogleAuth.signOut();
+        } catch (e) {
+          console.log('Google sign out error', e);
+        }
+      }
+    });
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     set({ user: null, token: null });
