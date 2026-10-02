@@ -17,6 +17,36 @@ export const Timer: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [isActive, timeLeft, tick]);
 
+  useEffect(() => {
+    import('@capacitor/core').then(async ({ Capacitor }) => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { DoNotDisturb } = await import('@gachlab/capacitor-dnd-plugin');
+          if (isActive && mode === 'focus') {
+            try {
+              await DoNotDisturb.setEnabled({ enabled: true });
+            } catch (e) {
+              console.log('Failed to enable DND, requesting permission', e);
+              try {
+                await DoNotDisturb.openDndSettings();
+              } catch (err) {
+                console.log('Failed to open DND settings', err);
+              }
+            }
+          } else {
+            try {
+              await DoNotDisturb.setEnabled({ enabled: false });
+            } catch (e) {
+              console.log('Failed to disable DND', e);
+            }
+          }
+        } catch (e) {
+          console.log('Plugin not available', e);
+        }
+      }
+    });
+  }, [isActive, mode]);
+
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const progress = ((initialTime - timeLeft) / initialTime) * 100;
