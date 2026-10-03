@@ -215,7 +215,35 @@ export const Home: React.FC = () => {
               {tasks.filter(t => t.completed).length} / {tasks.length} Completed
             </span>
           </div>
+          
+          <div className="mb-4">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const input = form.elements.namedItem('taskTitle') as HTMLInputElement;
+              if (input.value.trim()) {
+                useTimerStore.getState().addTask(input.value.trim(), new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                input.value = '';
+              }
+            }} className="flex gap-2">
+              <input 
+                type="text" 
+                name="taskTitle"
+                placeholder="What do you want to study today?" 
+                className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#6C3BC7]"
+              />
+              <button type="submit" className="bg-[#6C3BC7] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#582cb5] transition-colors">
+                Add
+              </button>
+            </form>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {tasks.length === 0 && (
+              <div className="col-span-1 lg:col-span-2 text-center py-6 text-gray-400 text-sm font-medium">
+                No tasks for today. Add one above!
+              </div>
+            )}
             {tasks.map((t) => (
               <div key={t.id} onClick={() => toggleTask(t.id)} className="cursor-pointer">
                 <TaskItem 
